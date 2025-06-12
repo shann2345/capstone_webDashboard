@@ -9,7 +9,7 @@
     <h1>Register as an Instructor</h1>
 
     @if ($errors->any())
-        <div>
+        <div style="color: red;">
             <ul>
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -18,7 +18,6 @@
         </div>
     @endif
 
-   
     <form method="POST" action="{{ route('instructor.register.post') }}">
         @csrf
 
