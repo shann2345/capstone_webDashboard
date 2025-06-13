@@ -4,7 +4,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\InstructorController;
-use App\Http\Controllers\CourseController; 
+use App\Http\Controllers\CourseController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -14,10 +14,6 @@ use Illuminate\Http\Request;
 Route::get('/', function () {
     return view('welcome');
 });
-
-// Display creating course dashboard
-Route::view('/instructor/courseCreation', 'instructor.createCourse')->name('courseCreation');
-Route::view('/instructor/dashboard', 'instructor.dashboard')->name('dashboard');
 
 // Display the login form
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -74,12 +70,15 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { /
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
 });
+
+// In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
-    // Show the course creation form
-    Route::get('/courses/create', [CourseController::class, 'create'])->name('courses.create');
 
-    // Handle the submission of the course creation form
-    Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
+    // Route to show the course creation form
+    Route::get('/instructor/createCourse', [CourseController::class, 'create'])->name('instructor.createCourse');
 
-    // You might add routes for 'edit', 'update', 'delete', 'show' courses later
+    // Route to handle the submission of the course creation form
+    // This POST route is what your form's action points to: action="{{ route('courses.store') }}"
+    Route::post('/instructor/createCourse', [CourseController::class, 'store'])->name('instructor.courseStore');
+    Route::get('/instructor/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 });

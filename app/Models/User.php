@@ -9,37 +9,21 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'role',
-        'department_id', 
+        'department_id', // <-- Ensure this is here
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -48,22 +32,17 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    // --- Start of New Relationships for User Model ---
-
     /**
      * Get the department that the user (e.g., instructor) belongs to.
-     * This defines a Many-to-One relationship.
      */
     public function department()
     {
-        // A User belongs to one Department.
-        // Laravel will look for 'department_id' on the 'users' table by default.
         return $this->belongsTo(Department::class);
     }
 
     /**
      * Get the courses that the user (e.g., instructor) teaches.
-     * This defines a One-to-Many relationship (from the instructor's perspective).
+     * This defines a One-to-Many relationship from the instructor's perspective.
      */
     public function taughtCourses()
     {
@@ -72,6 +51,4 @@ class User extends Authenticatable implements MustVerifyEmail
         // that points back to this user's 'id'.
         return $this->hasMany(Course::class, 'instructor_id');
     }
-
-    // --- End of New Relationships for User Model ---
 }

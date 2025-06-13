@@ -1,6 +1,6 @@
 {{-- resources/views/courses/create.blade.php --}}
 
-<x-layout> {{-- Assuming your main layout component is 'x-layout' --}}
+<x-layout>
 
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Create New Course</h1>
 
@@ -24,7 +24,7 @@
         </div>
     @endif
 
-    <form action="{{ route('courses.store') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+    <form action="{{ route('instructor.courseStore') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
         @csrf {{-- CSRF token for security --}}
 
         <div class="mb-4">
@@ -51,18 +51,13 @@
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="1">
         </div>
 
+        {{-- NEW DEPARTMENT INPUT FIELD --}}
         <div class="mb-4">
-            <label for="department_id" class="block text-gray-700 text-sm font-bold mb-2">Department:</label>
-            <select id="department_id" name="department_id"
-                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                <option value="">Select a Department</option>
-                @foreach ($departments as $department)
-                    <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
-                        {{ $department->name }}
-                    </option>
-                @endforeach
-            </select>
+            <label for="department_name" class="block text-gray-700 text-sm font-bold mb-2">Department Name:</label>
+            <input type="text" id="department_name" name="department_name" value="{{ old('department_name') }}"
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
         </div>
+        {{-- END NEW DEPARTMENT INPUT FIELD --}}
 
         <div class="mb-6">
             <label for="status" class="block text-gray-700 text-sm font-bold mb-2">Status:</label>

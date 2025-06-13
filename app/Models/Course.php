@@ -1,7 +1,5 @@
 <?php
 
-// app/Models/Course.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,36 +26,25 @@ class Course extends Model
 
     /**
      * Get the department that owns the Course.
+     * This defines a Many-to-One relationship.
      */
     public function department()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Department::class); // A Course belongs to one Department
     }
 
     /**
-     * Get the instructor (User) that owns the Course.
+     * Get the instructor (User) that teaches the Course.
+     * This defines a Many-to-One relationship.
      */
     public function instructor()
     {
-        // A course belongs to an instructor, which is a User model.
-        // We specify 'instructor_id' as the foreign key.
+        // A Course belongs to one Instructor (who is a User model).
+        // We specify 'instructor_id' as the foreign key in the 'courses' table.
         return $this->belongsTo(User::class, 'instructor_id');
     }
 
-    /**
-     * Get the quizzes for the course. (Future Relationship)
-     */
-    // public function quizzes()
-    // {
-    //     return $this->hasMany(Quiz::class);
-    // }
-
-    /**
-     * Get the students enrolled in the course. (Future Relationship - Many-to-Many)
-     */
-    // public function students()
-    // {
-    //     // This will typically be a many-to-many relationship through an 'enrollments' table
-    //     return $this->belongsToMany(User::class, 'enrollments');
-    // }
+    // Add future relationships here, e.g., to Quizzes, Students, etc.
+    // public function quizzes() { return $this->hasMany(Quiz::class); }
+    // public function students() { return $this->belongsToMany(User::class, 'enrollments'); }
 }

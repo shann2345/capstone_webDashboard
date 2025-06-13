@@ -1,7 +1,5 @@
 <?php
 
-// app/Models/Department.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,22 +15,24 @@ class Department extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', // Only 'name' is fillable for now
+        'name', // Only 'name' can be mass-assigned for now
     ];
 
     /**
-     * Get the users (instructors/students) associated with the department.
+     * Get the users (instructors/students/admins) who belong to this department.
+     * This defines a One-to-Many relationship (one department can have many users).
      */
     public function users()
     {
-        return $this->hasMany(User::class);
+        return $this->hasMany(User::class); // Laravel will look for 'department_id' on the 'users' table by default.
     }
 
     /**
-     * Get the courses belonging to this department.
+     * Get the courses that are offered by this department.
+     * This also defines a One-to-Many relationship (one department can offer many courses).
      */
     public function courses()
     {
-        return $this->hasMany(Course::class);
+        return $this->hasMany(Course::class); // Laravel will look for 'department_id' on the 'courses' table by default.
     }
 }
