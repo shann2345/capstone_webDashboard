@@ -6,6 +6,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\InstructorController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 
 
 Route::get('/', function () {
@@ -24,6 +26,21 @@ Route::get('/instructor/register', [RegisterController::class, 'showInstructorRe
 // Handle the instructor registration form submission
 Route::post('/instructor/register', [RegisterController::class, 'registerInstructor'])->name('instructor.register.post');
 
+// Email Verification Routes (Place these before authenticated routes that require verification)
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+    return redirect('/dashboard')->with('status', 'Your email has been verified!');
+})->middleware(['auth', 'signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+    return back()->with('status', 'Verification link sent!');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
 
 // --- Authenticated Routes (requires login) ---
 
@@ -31,7 +48,7 @@ Route::post('/instructor/register', [RegisterController::class, 'registerInstruc
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Generic dashboard route (for any logged-in user, redirects based on role)
-Route::middleware(['auth:web'])->group(function () {
+Route::middleware(['auth:web', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
     Route::get('/dashboard', function () {
         $user = Auth::user();
         if ($user->role === 'admin') {
@@ -39,20 +56,16 @@ Route::middleware(['auth:web'])->group(function () {
         } elseif ($user->role === 'instructor') {
             return redirect()->route('instructor.dashboard');
         }
-        // Fallback for other roles (e.g., 'student' if you had one)
-        return 'THIS IS ERROR, GO BACK'; // Shows a basic user dashboard
+        return "This is errorrr, Go back";
     })->name('dashboard');
 });
 
-// Admin specific routes (requires authentication AND admin role)
-// The 'role' middleware will be created in the next step
-Route::middleware(['auth:web', 'role:admin'])->group(function () {
+// Admin specific routes (requires authentication AND admin role AND verification)
+Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
-    // Add other admin routes here (e.g., Route::get('/admin/users', [AdminController::class, 'manageUsers']);)
 });
 
-// Instructor specific routes (requires authentication AND instructor role)
-Route::middleware(['auth:web', 'role:instructor'])->group(function () {
+// Instructor specific routes (requires authentication AND instructor role AND verification)
+Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
-    // Add other instructor routes here (e.g., Route::get('/instructor/courses', [InstructorController::class, 'manageCourses']);)
 });

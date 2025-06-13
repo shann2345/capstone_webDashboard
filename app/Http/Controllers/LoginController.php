@@ -29,11 +29,10 @@ class LoginController extends Controller
 
             $user = Auth::user(); // Get the currently logged-in user
 
-            // Redirect based on the user's role
             if ($user->role === 'admin') {
-                return redirect()->intended('/admin/dashboard'); // Redirect to admin dashboard
+                return redirect()->intended('/admin/dashboard'); 
             } elseif ($user->role === 'instructor') {
-                return redirect()->intended('/instructor/dashboard'); // Redirect to instructor dashboard
+                return redirect()->intended('/instructor/dashboard'); 
             } else {
                 // Default redirect for other roles (e.g., 'student' if you had one)
                 return redirect()->intended('/dashboard'); // Generic user dashboard

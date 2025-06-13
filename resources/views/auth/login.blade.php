@@ -32,10 +32,10 @@
         <label for="password">Password:</label><br>
         <input type="password" id="password" name="password" required><br><br>
 
+            <p>Don't have an account? <a href="{{ route('instructor.register.get') }}">Sign Up</a></p>
         <button type="submit">Login</button>
     </form>
 
-    <p>Don't have an account? <a href="{{ route('instructor.register.get') }}">Sign Up (Instructor)</a></p>
     {{-- You can add a student signup route here later if needed --}}
 
 </body>

@@ -11,4 +11,5 @@ class AdminController extends Controller
     {
         return view('admin.dashboard'); // Loads resources/views/admin/dashboard.blade.php
     }
+    
 }
