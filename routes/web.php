@@ -4,6 +4,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\CourseController; 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -13,6 +14,10 @@ use Illuminate\Http\Request;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Display creating course dashboard
+Route::view('/instructor/courseCreation', 'instructor.createCourse')->name('courseCreation');
+Route::view('/instructor/dashboard', 'instructor.dashboard')->name('dashboard');
 
 // Display the login form
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -68,4 +73,13 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { /
 // Instructor specific routes (requires authentication AND instructor role AND verification)
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
+});
+Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
+    // Show the course creation form
+    Route::get('/courses/create', [CourseController::class, 'create'])->name('courses.create');
+
+    // Handle the submission of the course creation form
+    Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
+
+    // You might add routes for 'edit', 'update', 'delete', 'show' courses later
 });

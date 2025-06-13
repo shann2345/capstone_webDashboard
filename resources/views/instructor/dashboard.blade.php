@@ -27,8 +27,9 @@
                     <br>
                     <hr class="my-4 border-gray-200">
                     <br>
-                    This section demonstrates the content that would typically come from your `$slot` variable in a Blade layout.
-                    <br>
+                    @foreach (Auth::user()->taughtCourses as $course)
+                        <p>{{ $course->title }} ({{ $course->course_code }})</p>
+                    @endforeach
                     <hr class="my-4 border-gray-200">
                     <br>
                     <?php

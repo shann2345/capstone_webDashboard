@@ -24,7 +24,7 @@
     @endif
 
     <form method="POST" action="{{ route('login') }}">
-        @csrf {{-- CSRF token for security (required for POST forms) --}}
+        @csrf
 
         <label for="email">Email:</label><br>
         <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus><br><br>
@@ -35,8 +35,6 @@
             <p>Don't have an account? <a href="{{ route('instructor.register.get') }}">Sign Up</a></p>
         <button type="submit">Login</button>
     </form>
-
-    {{-- You can add a student signup route here later if needed --}}
 
 </body>
 </html>
