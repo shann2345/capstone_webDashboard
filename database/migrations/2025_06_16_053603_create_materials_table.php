@@ -24,6 +24,8 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('file_path')->nullable(); // Path to the uploaded file, nullable if it's just text/link
+            $table->string('original_filename')->nullable(); // Store original filename for download
+
             $table->string('material_type')->default('document'); // e.g., 'pdf', 'video', 'link', 'text', 'document'
 
             // Timestamps for availability control

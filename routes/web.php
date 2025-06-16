@@ -5,6 +5,7 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\MaterialController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -66,14 +67,9 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { /
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 });
 
-// Instructor specific routes (requires authentication AND instructor role AND verification)
-Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
-    Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
-});
-
 // In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
-
+    Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
     // Route to show the course creation form
     Route::get('/instructor/createCourse', [CourseController::class, 'create'])->name('instructor.createCourse');
 
@@ -81,4 +77,12 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     // This POST route is what your form's action points to: action="{{ route('courses.store') }}"
     Route::post('/instructor/createCourse', [CourseController::class, 'store'])->name('instructor.courseStore');
     Route::get('/instructor/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+    Route::get('/courses/{course}/materials', [MaterialController::class, 'showMaterial'])->name('materials.showMaterial');
+
+    // Handle the upload/storage of a new material for a specific course
+    Route::post('/courses/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
+
+    // Route for downloading a specific material file
+    Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
+
 });

@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Material;
 use App\Models\Program; // Still need to import Department model!
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,7 +58,8 @@ class CourseController extends Controller
     }
     public function show(Course $course) // Laravel's Route Model Binding automatically finds the Course by ID
     {
+        $materials = $course->materials()->latest()->get();
         // You can add more complex logic here later (e.g., check if instructor owns course)
-        return view('instructor.course.show', compact('course'));
+        return view('instructor.course.show', compact('course', 'materials'));
     }
 }
