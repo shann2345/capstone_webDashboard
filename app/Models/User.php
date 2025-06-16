@@ -16,7 +16,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'role',
-        'department_id', // <-- Ensure this is here
+        'program_id', 
     ];
 
     protected $hidden = [
@@ -33,11 +33,11 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the department that the user (e.g., instructor) belongs to.
+     * Get the program that the user (e.g., instructor) belongs to.
      */
-    public function department()
+    public function program()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Program::class);
     }
 
     /**

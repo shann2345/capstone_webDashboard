@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('departments', function (Blueprint $table) {
+        Schema::create('programs', function (Blueprint $table) {
             $table->id();             // Auto-incrementing primary key (e.g., 1, 2, 3...)
             $table->string('name')->unique(); // Name of the department (e.g., 'Computer Science', 'Mathematics'). 'unique()' means no two departments can have the same name.
             $table->timestamps();     // Adds 'created_at' and 'updated_at' columns automatically
@@ -23,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('departments'); // If you rollback this migration, the table is dropped.
+        Schema::dropIfExists('programs'); // If you rollback this migration, the table is dropped.
     }
 };

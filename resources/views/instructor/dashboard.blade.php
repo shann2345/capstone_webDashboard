@@ -29,8 +29,8 @@
                                     <h3 class="text-xl font-bold text-gray-800 mb-2">{{ $course->title }}</h3>
                                     <p class="text-sm text-gray-500 mb-4">
                                         {{ $course->course_code }}
-                                        @if($course->department)
-                                            <span class="ml-2 px-2 py-1 text-gray-700 text-xs font-semibold"><br>{{ $course->department->name }}</span>
+                                        @if($course->program)
+                                            <span class="ml-2 px-2 py-1 text-gray-700 text-xs font-semibold"><br>{{ $course->program->name }}</span>
                                         @endif
                                     </p>
                                     <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-4"> {{-- line-clamp for description --}}

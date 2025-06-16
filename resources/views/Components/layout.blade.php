@@ -48,8 +48,8 @@
         <!-- Navigation Sidebar -->
         <nav class="w-64 bg-white border-r border-gray-200 p-4 shadow-sm md:flex flex-col hidden">
             <ul class="space-y-2">
-                <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Active Classes</a></li>
-                <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Quiz Creator</a></li>
+                <li><a href="{{  route('instructor.dashboard') }}" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Active Classes</a></li>
+                <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Create Quiz</a></li>
                 <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Chronos Log</a></li>
                 <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Task Registry</a></li>
                 <li><a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-150">Settings</a></li>

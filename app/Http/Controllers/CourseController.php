@@ -5,7 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\Department; // Still need to import Department model!
+use App\Models\Program; // Still need to import Department model!
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str; // Import Str facade for string manipulation (optional but good practice)
@@ -25,21 +25,21 @@ class CourseController extends Controller
             'course_code' => 'required|string|max:50|unique:courses,course_code',
             'description' => 'nullable|string',
             'credits' => 'nullable|integer|min:1',
-            'department_name' => 'required|string|max:255', // Validate the new department name input
+            'program_name' => 'required|string|max:255', // Validate the new department name input
             'status' => 'required|in:draft,published,archived',
         ]);
 
         // 2. Process Department Name: Find existing or create new
         // Convert input department name to uppercase for consistent storage/lookup
-        $departmentName = Str::upper($request->department_name);
+        $programName = Str::upper($request->program_name);
 
         // Find the department by name, or create it if it doesn't exist
-        $department = Department::firstOrCreate(
-            ['name' => $departmentName]
+        $program = Program::firstOrCreate(
+            ['name' => $programName]
         );
 
         // Get the department's ID
-        $departmentId = $department->id;
+        $programId = $program->id;
 
         // 3. Create the new Course record
         Course::create([
@@ -47,7 +47,7 @@ class CourseController extends Controller
             'course_code' => $request->course_code,
             'description' => $request->description,
             'credits' => $request->credits,
-            'department_id' => $departmentId, // Use the ID from the found/created department
+            'program_id' => $programId, // Use the ID from the found/created department
             'instructor_id' => Auth::id(),
             'status' => $request->status,
         ]);

@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('instructor.register.post') }}">
+    <form method="POST" action="{{ route('instructor.register.post') }}" id="createRegisterForm">
         @csrf
 
         <label for="name">Name:</label><br>
@@ -33,9 +33,18 @@
         <label for="password_confirmation">Confirm Password:</label><br>
         <input type="password" id="password_confirmation" name="password_confirmation" required><br><br>
 
-        <button type="submit">Register as Instructor</button>
+        <button type="submit" 
+                id="submitRegisterButton">Sign Up</button>
     </form>
 
     <p>Already have an account? <a href="{{ route('login') }}">Login here</a></p>
 </body>
+    <script>
+        document.getElementById('createRegisterForm').addEventListener('submit', function() {
+            // Disable the submit button to prevent multiple submissions
+            document.getElementById('submitRegisterButton').setAttribute('disabled', 'disabled');
+            // Optionally, change the text or add a loading spinner
+            document.getElementById('submitRegisterButton').innerText = 'Processing...';
+        });
+    </script>
 </html>

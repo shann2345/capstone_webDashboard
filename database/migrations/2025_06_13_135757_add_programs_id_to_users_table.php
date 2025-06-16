@@ -16,9 +16,9 @@ return new class extends Migration
             // ->nullable(): Means a user doesn't *have* to belong to a department (e.g., admin or students without an assigned dept).
             // ->constrained('departments'): Links this column to the 'id' column in the 'departments' table.
             // ->onDelete('set null'): If a department record is deleted, any users linked to it will have their 'department_id' set to NULL.
-            $table->foreignId('department_id')
+            $table->foreignId('program_id')
                   ->nullable()
-                  ->constrained('departments')
+                  ->constrained('programs')
                   ->onDelete('set null');
         });
     }
@@ -30,9 +30,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // When rolling back, first drop the foreign key constraint
-            $table->dropConstrainedForeignId('department_id');
+            $table->dropConstrainedForeignId('program_id');
             // Then drop the column itself
-            $table->dropColumn('department_id');
+            $table->dropColumn('program_id');
         });
     }
 };

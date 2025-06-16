@@ -24,7 +24,9 @@
         </div>
     @endif
 
-    <form action="{{ route('instructor.courseStore') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+    {{-- !!! IMPORTANT: ADD id="createCourseForm" HERE !!! --}}
+    <form action="{{ route('instructor.courseStore') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto"
+          id="createCourseForm"> {{-- <-- THIS WAS MISSING --}}
         @csrf {{-- CSRF token for security --}}
 
         <div class="mb-4">
@@ -51,13 +53,11 @@
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="1">
         </div>
 
-        {{-- NEW DEPARTMENT INPUT FIELD --}}
         <div class="mb-4">
-            <label for="department_name" class="block text-gray-700 text-sm font-bold mb-2">Department Name:</label>
-            <input type="text" id="department_name" name="department_name" value="{{ old('department_name') }}"
+            <label for="program_name" class="block text-gray-700 text-sm font-bold mb-2">Program Name:</label>
+            <input type="text" id="program_name" name="program_name" value="{{ old('program_name') }}"
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
         </div>
-        {{-- END NEW DEPARTMENT INPUT FIELD --}}
 
         <div class="mb-6">
             <label for="status" class="block text-gray-700 text-sm font-bold mb-2">Status:</label>
@@ -71,7 +71,8 @@
 
         <div class="flex items-center justify-between">
             <button type="submit"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    id="submitCourseButton">
                 Create Course
             </button>
             <a href="{{ route('instructor.dashboard') }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
@@ -80,4 +81,12 @@
         </div>
     </form>
 
+    <script>
+        document.getElementById('createCourseForm').addEventListener('submit', function() {
+            // Disable the submit button to prevent multiple submissions
+            document.getElementById('submitCourseButton').setAttribute('disabled', 'disabled');
+            // Optionally, change the text or add a loading spinner
+            document.getElementById('submitCourseButton').innerText = 'Creating...';
+        });
+    </script>
 </x-layout>

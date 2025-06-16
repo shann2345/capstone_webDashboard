@@ -22,13 +22,14 @@ return new class extends Migration
 
             // Foreign Key to `departments` table
             // A course must belong to a department
-            $table->foreignId('department_id')
-                  ->constrained('departments') // Links to 'id' in 'departments' table
+            $table->foreignId('program_id')
+                  ->constrained('programs') // Links to 'id' in 'departments' table
                   ->onDelete('restrict');     // Prevents deleting a department if courses are linked to it
 
             // Foreign Key to `users` table for the instructor
             // An instructor is a 'user' with the 'instructor' role
-            $table->foreignId('instructor_id') // Laravel automatically assumes 'users' table and 'id' column for 'foreignId'
+            $table->foreignId('instructor_id')
+                  ->nullable() // Laravel automatically assumes 'users' table and 'id' column for 'foreignId'
                   ->constrained('users')       // Links to 'id' in 'users' table
                   ->onDelete('restrict');     // Prevents deleting an instructor if they teach courses
 

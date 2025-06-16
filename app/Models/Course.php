@@ -19,7 +19,7 @@ class Course extends Model
         'course_code',
         'description',
         'credits',
-        'department_id',
+        'program_id',
         'instructor_id',
         'status',
     ];
@@ -28,9 +28,9 @@ class Course extends Model
      * Get the department that owns the Course.
      * This defines a Many-to-One relationship.
      */
-    public function department()
+    public function program()
     {
-        return $this->belongsTo(Department::class); // A Course belongs to one Department
+        return $this->belongsTo(Program::class); // A Course belongs to one Department
     }
 
     /**
@@ -42,6 +42,10 @@ class Course extends Model
         // A Course belongs to one Instructor (who is a User model).
         // We specify 'instructor_id' as the foreign key in the 'courses' table.
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+    public function materials()
+    {
+        return $this->hasMany(Material::class);
     }
 
     // Add future relationships here, e.g., to Quizzes, Students, etc.

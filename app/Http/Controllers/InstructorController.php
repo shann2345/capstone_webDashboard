@@ -15,7 +15,7 @@ class InstructorController extends Controller
         // Load the courses taught by this instructor using the 'taughtCourses' relationship
         // We also eager load the 'department' relationship for each course
         // to display the department name if needed.
-        $courses = $instructor->taughtCourses()->with('department')->get();
+        $courses = $instructor->taughtCourses()->with('program')->get();
 
         // Pass the instructor object and their courses to the dashboard view
         return view('instructor.dashboard', compact('instructor', 'courses'));
