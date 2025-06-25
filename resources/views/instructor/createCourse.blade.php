@@ -25,7 +25,7 @@
     @endif
 
     {{-- !!! IMPORTANT: ADD id="createCourseForm" HERE !!! --}}
-    <form action="{{ route('instructor.courseStore') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto"
+    <form action="{{ route('course.store') }}" method="POST" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto"
           id="createCourseForm"> {{-- <-- THIS WAS MISSING --}}
         @csrf {{-- CSRF token for security --}}
 

@@ -2,10 +2,11 @@
 
 // app/Http/Controllers/RegisterController.php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
 use App\Models\User; // Import your User model
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash; // Import Hash facade
 use Illuminate\Support\Facades\Auth; // Import Auth facade
 

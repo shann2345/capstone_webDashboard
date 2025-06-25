@@ -1,11 +1,12 @@
 <?php
 
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\InstructorController;
-use App\Http\Controllers\CourseController;
-use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\Instructor\InstructorController;
+use App\Http\Controllers\Instructor\CourseController;
+use App\Http\Controllers\Instructor\MaterialController;
+use App\Http\Controllers\Instructor\AssessmentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -70,19 +71,17 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { /
 // In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
-    // Route to show the course creation form
-    Route::get('/instructor/createCourse', [CourseController::class, 'create'])->name('instructor.createCourse');
 
-    // Route to handle the submission of the course creation form
-    // This POST route is what your form's action points to: action="{{ route('courses.store') }}"
-    Route::post('/instructor/createCourse', [CourseController::class, 'store'])->name('instructor.courseStore');
-    Route::get('/instructor/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
-    Route::get('/courses/{course}/materials', [MaterialController::class, 'showMaterial'])->name('materials.showMaterial');
+    Route::get('/course', [CourseController::class, 'create'])->name('course.create');
+    Route::post('/course/createCourse', [CourseController::class, 'store'])->name('course.store');
+    Route::get('/course/{course}', [CourseController::class, 'show'])->name('courses.show');
 
-    // Handle the upload/storage of a new material for a specific course
-    Route::post('/courses/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
-
-    // Route for downloading a specific material file
+    Route::get('/course/{course}/materials', [MaterialController::class, 'create'])->name('materials.create');
+    Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
+
+    Route::get('/course/{course}/assessment', [AssessmentController::class, 'create'])->name('assessments.create');
+    Route::post('/course/{course}/assessment', [AssessmentController::class, 'store'])->name('assessments.store');
+    
 
 });

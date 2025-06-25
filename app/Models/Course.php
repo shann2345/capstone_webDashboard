@@ -47,6 +47,9 @@ class Course extends Model
     {
         return $this->hasMany(Material::class);
     }
+    public function assessments() {
+        return $this->hasMany(Assessment::class);
+    }
 
     // Add future relationships here, e.g., to Quizzes, Students, etc.
     // public function quizzes() { return $this->hasMany(Quiz::class); }

@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Instructor;
 
 use App\Models\Course; // To fetch the course
 use App\Models\Material; // To work with Material model
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage; // For file storage operations
 use Illuminate\Support\Facades\Response; // For file downloads
 use Illuminate\Support\Str;
@@ -14,7 +15,7 @@ class MaterialController extends Controller
     /**
      * Display a listing of materials for a specific course, and the upload form.
      */
-    public function showMaterial(Course $course)
+    public function create(Course $course)
     {
         // Load materials for this course, ordered by creation date
         $materials = $course->materials()->latest()->get();
@@ -86,7 +87,7 @@ class MaterialController extends Controller
         $material->save();
 
         // 4. Redirect back with success message
-        return redirect()->route('materials.showMaterial', $course->id)->with('success', 'Material uploaded successfully!');
+        return redirect()->route('materials.create', $course->id)->with('success', 'Material uploaded successfully!');
     }
 
     /**

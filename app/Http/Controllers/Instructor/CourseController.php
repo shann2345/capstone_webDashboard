@@ -2,9 +2,10 @@
 
 // app/Http/Controllers/CourseController.php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Instructor;
 
 use App\Models\Course;
+use App\Http\Controllers\Controller;
 use App\Models\Material;
 use App\Models\Program; // Still need to import Department model!
 use Illuminate\Http\Request;
@@ -56,10 +57,24 @@ class CourseController extends Controller
         // 4. Redirect back with a success message
         return redirect()->route('instructor.dashboard')->with('success', 'Course created successfully!');
     }
-    public function show(Course $course) // Laravel's Route Model Binding automatically finds the Course by ID
+    public function show(Course $course)
     {
-        $materials = $course->materials()->latest()->get();
-        // You can add more complex logic here later (e.g., check if instructor owns course)
-        return view('instructor.course.show', compact('course', 'materials'));
+        // Eager load materials and assessments for the course.
+        // Also eager load the 'material' relationship on assessments themselves
+        // so we can display the associated material title in the view.
+        $course->load(['materials', 'assessments.material']);
+
+        // Filter assessments into independent (material_id is null)
+        // and linked (material_id is not null).
+        $independentAssessments = $course->assessments->filter(function ($assessment) {
+            return $assessment->material_id === null;
+        });
+
+        // The linked assessments are still attached to their respective Material models.
+        // We don't necessarily need to pass them as a separate variable if they are
+        // always displayed implicitly through the material relationship on the assessment.
+        // However, if you wanted a separate list of ALL assessments, you'd just pass $course->assessments.
+
+        return view('instructor.course.show', compact('course', 'independentAssessments'));
     }
 }

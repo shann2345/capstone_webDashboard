@@ -1,3 +1,5 @@
+{{-- resources/views/materials/index.blade.php --}}
+
 <x-layout>
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Manage Materials for: <span class="text-blue-700">{{ $course->title }}</span></h1>
     <p class="text-gray-600 mb-8">Course Code: {{ $course->course_code }}</p>
@@ -16,7 +18,7 @@
         </div>
     @endif
 
-    {{-- Display validation errors --}}
+    {{-- Display validation errors (these appear after redirect on validation failure) --}}
     @if ($errors->any())
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong class="font-bold">Whoops!</strong>
@@ -78,7 +80,7 @@
     </div>
 
     {{-- List Existing Materials --}}
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    {{-- <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Materials</h2>
         @if ($materials->isEmpty())
             <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative text-center" role="alert">
@@ -131,10 +133,10 @@
                                     {{ $material->created_at->format('M d, Y') }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    @if($material->file_path) {{-- Only show download for actual files --}}
+                                    @if($material->file_path) 
                                         <a href="{{ route('materials.download', $material->id) }}" class="text-blue-600 hover:text-blue-900 mr-4">Download</a>
                                     @endif
-                                    {{-- Add Edit/Delete buttons here later --}}
+                                    
                                     <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
                                     <a href="#" class="text-red-600 hover:text-red-900 ml-4">Delete</a>
                                 </td>
@@ -144,7 +146,7 @@
                 </table>
             </div>
         @endif
-    </div>
+    </div> --}}
 
     <div class="flex justify-end mt-6">
         <a href="{{ route('courses.show', $course->id) }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
@@ -152,11 +154,97 @@
         </a>
     </div>
 
-    {{-- JavaScript to disable button on submit --}}
+    {{-- !!! BEGIN: Upload Progress Modal !!! --}}
+    <div id="uploadProgressModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Uploading Material...</h3>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="text-sm text-gray-600 text-center">0% Complete</p>
+        </div>
+    </div>
+    {{-- !!! END: Upload Progress Modal !!! --}}
+
     <script>
-        document.getElementById('uploadMaterialForm').addEventListener('submit', function() {
-            document.getElementById('submitMaterialButton').setAttribute('disabled', 'disabled');
-            document.getElementById('submitMaterialButton').innerText = 'Uploading...';
+        document.getElementById('uploadMaterialForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const form = event.target;
+            const submitButton = document.getElementById('submitMaterialButton');
+            const modal = document.getElementById('uploadProgressModal');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            // Disable the submit button and show the modal
+            submitButton.setAttribute('disabled', 'disabled');
+            submitButton.innerText = 'Uploading...';
+            modal.classList.remove('hidden'); // Show the modal
+
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            progressText.innerText = '0% Complete';
+
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+
+            xhr.open('POST', form.action);
+            xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            // Progress event handler
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.style.width = percentComplete.toFixed(0) + '%';
+                    progressText.innerText = percentComplete.toFixed(0) + '% Complete';
+                }
+            };
+
+            // Load (completion) event handler
+            xhr.onload = function() {
+                modal.classList.add('hidden'); // Hide modal on completion
+                submitButton.removeAttribute('disabled');
+                submitButton.innerText = 'Upload Material';
+
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Success: Redirect to the materials index page (which refreshes the list)
+                    window.location.href = xhr.responseURL;
+                } else {
+                    // Error: Handle validation errors or server errors
+                    let errorMessage = 'An error occurred during upload.';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.message) {
+                            errorMessage = response.message;
+                        }
+                        // If validation errors, Laravel usually redirects and flashes them.
+                        // For API style, you'd show errors here. For now, a simple redirect on fail
+                        // will show validation errors (if server redirects back).
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                    }
+                    // Since Laravel validation redirects, for XHR success means redirect.
+                    // For XHR errors, we generally wouldn't get a redirect, so a simple alert for now.
+                    // In a full SPA, you'd parse errors and display them without page reload.
+                    alert(errorMessage + ' Please check your input and try again.');
+
+                    // Optionally, redirect to allow Laravel's validation errors to be displayed
+                    // if the server actually returned a redirect with errors (which it would for validation failure)
+                    if (xhr.status === 422 || xhr.status === 302) { // 422 for validation, 302 for redirect
+                        window.location.href = xhr.responseURL || window.location.href;
+                    }
+                }
+            };
+
+            // Error handler (network errors, etc.)
+            xhr.onerror = function() {
+                modal.classList.add('hidden'); // Hide modal on error
+                submitButton.removeAttribute('disabled');
+                submitButton.innerText = 'Upload Material';
+                alert('Network error or server unreachable. Please try again.');
+            };
+
+            xhr.send(formData);
         });
     </script>
 </x-layout>
