@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB; // NEW: For database transactions
 use Illuminate\Support\Facades\Auth; // For Auth::user() check in download method
+use Illuminate\Support\Facades\Log; // For logging errors
 
 class AssessmentController extends Controller
 {
@@ -27,7 +28,7 @@ class AssessmentController extends Controller
     {
         // Eager load material relationship for assessments to show material title if linked
         $assessments = $course->assessments()->with('material')->latest()->get();
-        return view('instructor.assessment.index', compact('course', 'assessments'));
+        return view('instructor.assessment.createAssessment', compact('course', 'assessments'));
     }
 
     /**
@@ -58,6 +59,7 @@ class AssessmentController extends Controller
      */
     public function store(Request $request, Course $course)
     {
+        Log::info('Request Data:', $request->all());
         // Use a database transaction to ensure atomicity (all or nothing)
         return DB::transaction(function () use ($request, $course) {
             // 1. Validate the main assessment data
@@ -197,14 +199,14 @@ class AssessmentController extends Controller
 
             // 4. Return the decrypted content as a downloadable file
             return Response::make($decryptedContent, 200, [
-                'Content-Type'        => Storage::disk('local')->mimeType($assessment->encrypted_file_path) ?? 'application/octet-stream', // Try to get original mime type, fallback to generic
+                'Content-Type'        => \Illuminate\Support\Facades\File::mimeType($assessment->original_filename) ?? 'application/octet-stream', // Determine mime type from original filename
                 'Content-Disposition' => 'attachment; filename="' . $assessment->original_filename . '"',
             ]);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             return back()->with('error', 'Failed to decrypt assessment file. It might be corrupted or the encryption key has changed.');
         } catch (\Exception $e) {
             // Log the actual exception for debugging in storage/logs/laravel.log
-            \Log::error("Assessment download error for ID {$assessment->id}: " . $e->getMessage());
+            Log::error("Assessment download error for ID {$assessment->id}: " . $e->getMessage());
             return back()->with('error', 'An unexpected error occurred during download. Please try again or contact support.');
         }
     }

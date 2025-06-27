@@ -1,164 +1,146 @@
 {{-- resources/views/instructor/assessment/createAssessment.blade.php --}}
 
-{{-- Using the x-layout Blade Component --}}
 <x-layout>
-    {{-- Passing content to the 'title' slot of the x-layout component --}}
-    <x-slot name="title">
-        Create Assessment - {{ $course->title }}
-    </x-slot>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Create New Assessment for: <span class="text-blue-700">{{ $course->title }}</span></h1>
+    <p class="text-gray-600 mb-8">Course Code: {{ $course->course_code }}</p>
 
-    {{-- Main content for the default slot of the x-layout component --}}
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <!-- Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h1 class="h3 mb-0">Create Assessment</h1>
-                        <p class="text-muted">Course: {{ $course->title }}</p>
-                    </div>
-                    <a href="{{ route('courses.show', $course->id) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Course
-                    </a>
+    {{-- Display success message (Laravel's flash message) --}}
+    @if (session('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    {{-- Display Laravel validation errors (if redirected back due to non-AJAX submission or specific backend error handling) --}}
+    @if ($errors->any())
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Whoops!</strong>
+            <span class="block sm:inline">There were some problems with your input.</span>
+            <ul class="mt-3 list-disc list-inside">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Assessment Details</h2>
+        <form action="{{ route('assessments.store', $course->id) }}" method="POST" enctype="multipart/form-data" id="createAssessmentForm">
+            @csrf
+
+            {{-- Optional: Link to a Material --}}
+            @if(isset($course->materials) && $course->materials->isNotEmpty())
+                <div class="mb-4">
+                    <label for="material_id" class="block text-gray-700 text-sm font-bold mb-2">Associate with Material (Optional):</label>
+                    <select id="material_id" name="material_id" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">-- Select a Material --</option>
+                        @foreach ($course->materials as $material)
+                            <option value="{{ $material->id }}"
+                                {{ old('material_id', $selectedMaterialId ?? null) == $material->id ? 'selected' : '' }}>
+                                {{ $material->title }} ({{ ucfirst($material->material_type) }})
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
+            @else
+                <p class="text-gray-500 text-sm mb-4">No materials available to link this assessment to in this course.</p>
+                <input type="hidden" name="material_id" value="{{ $selectedMaterialId ?? '' }}">
+            @endif
 
-                <!-- Main Form Card -->
-                <div class="card shadow">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Assessment Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('assessments.store', $course->id) }}" enctype="multipart/form-data" id="createAssessmentForm">
-                            @csrf
+            <div class="mb-4">
+                <label for="title" class="block text-gray-700 text-sm font-bold mb-2">Assessment Title:</label>
+                <input type="text" id="title" name="title" value="{{ old('title') }}"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+            </div>
 
-                            {{-- Display Validation Errors (from Laravel if not AJAX, or from JS if AJAX) --}}
-                            <div id="form-errors" class="alert alert-danger" style="display: none;">
-                                <h6>Please fix the following errors:</h6>
-                                <ul id="error-list" class="mb-0">
-                                    {{-- Errors will be dynamically inserted here --}}
-                                </ul>
-                            </div>
-                            @if ($errors->any())
-                                <div class="alert alert-danger">
-                                    <h6>Please fix the following errors:</h6>
-                                    <ul class="mb-0">
-                                        @foreach ($errors->all() as $error)
-                                            <li>{{ $error }}</li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
+            <div class="mb-4">
+                <label for="type" class="block text-gray-700 text-sm font-bold mb-2">Assessment Type:</label>
+                <select id="type" name="type"
+                        class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                    <option value="quiz" {{ old('type') == 'quiz' ? 'selected' : '' }}>Quiz</option>
+                    <option value="activity" {{ old('type') == 'activity' ? 'selected' : '' }}>Activity</option>
+                    <option value="exam" {{ old('type') == 'exam' ? 'selected' : '' }}>Exam</option>
+                    <option value="assignment" {{ old('type') == 'assignment' ? 'selected' : '' }}>Assignment</option>
+                    <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
+                </select>
+            </div>
 
-                            <!-- Basic Assessment Information -->
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="title" class="form-label fw-bold">Assessment Title <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control @error('title') is-invalid @enderror"
-                                               id="title" name="title" value="{{ old('title') }}" required>
-                                        @error('title')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="type" class="form-label fw-bold">Assessment Type <span class="text-danger">*</span></label>
-                                        <select class="form-select @error('type') is-invalid @enderror" id="type" name="type" required>
-                                            <option value="">Select Assessment Type</option>
-                                            <option value="quiz" {{ old('type') == 'quiz' ? 'selected' : '' }}>Quiz</option>
-                                            <option value="exam" {{ old('type') == 'exam' ? 'selected' : '' }}>Exam</option>
-                                            <option value="assignment" {{ old('type') == 'assignment' ? 'selected' : '' }}>Assignment</option>
-                                            <option value="activity" {{ old('type') == 'activity' ? 'selected' : '' }}>Activity</option>
-                                            <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
-                                        </select>
-                                        @error('type')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
-                            </div>
+            <div class="mb-4">
+                <label for="description" class="block text-gray-700 text-sm font-bold mb-2">Description / Instructions:</label>
+                <textarea id="description" name="description" rows="5"
+                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ old('description') }}</textarea>
+            </div>
 
-                            <div class="form-group mb-3">
-                                <label for="description" class="form-label fw-bold">Description / Instructions:</label>
-                                <textarea id="description" name="description" rows="5"
-                                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ old('description') }}</textarea>
-                            </div>
-
-                            {{-- Section for File Upload (Visible for Quiz, Exam, Assignment, Activity) --}}
-                            <div id="fileUploadSection" class="border p-4 rounded-md bg-gray-50 mb-4 hidden">
-                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Upload Assessment File (Optional)</h3>
-                                <div class="mb-4">
-                                    <label for="assessment_file" class="block text-gray-700 text-sm font-bold mb-2">Upload File (e.g., PDF, Word, Excel for questions/briefs):</label>
-                                    <input type="file" id="assessment_file" name="assessment_file"
-                                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                                    <p class="mt-1 text-sm text-gray-500">PDF, Word, Excel, PPT, TXT, ZIP, RAR (Max 20MB). Leave blank for text-only activities or if using online question builder.</p>
-                                </div>
-                            </div>
-
-                            {{-- Section for Quiz/Exam Specific Settings (Duration, Access Code) --}}
-                            <div id="quizSpecificSection" class="border p-4 rounded-md bg-gray-50 mb-4 hidden"> {{-- Added hidden class --}}
-                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Quiz/Exam Settings</h3>
-                                <div class="mb-4">
-                                    <label for="duration_minutes" class="block text-gray-700 text-sm font-bold mb-2">Duration in Minutes (Optional):</label>
-                                    <input type="number" id="duration_minutes" name="duration_minutes" value="{{ old('duration_minutes') }}"
-                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0">
-                                </div>
-                                <div class="mb-4">
-                                    <label for="access_code" class="block text-gray-700 text-sm font-bold mb-2">Access Code (Optional):</label>
-                                    <input type="text" id="access_code" name="access_code" value="{{ old('access_code') }}"
-                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                                    <p class="mt-1 text-sm text-gray-500">Students need this code to unlock the assessment.</p>
-                                </div>
-                            </div>
-
-                            {{-- Dynamic Question Builder Section --}}
-                            <div id="questionBuilderSection" class="border p-4 rounded-md bg-blue-50 mb-4 hidden"> {{-- Added hidden class --}}
-                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Online Quiz/Exam Questions</h3>
-                                <p class="text-sm text-gray-600 mb-4">
-                                    Build your questions directly here. You can add multiple choice, identification, or true/false questions.
-                                </p>
-
-                                <div id="questionsContainer" class="space-y-6">
-                                    {{-- Questions will be appended here by JavaScript --}}
-                                </div>
-
-                                <button type="button" id="addQuestionButton"
-                                        class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                    + Add Question
-                                </button>
-                            </div>
-
-                            {{-- Availability Timestamps --}}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div>
-                                    <label for="available_at" class="block text-gray-700 text-sm font-bold mb-2">Available From (Optional Date/Time):</label>
-                                    <input type="datetime-local" id="available_at" name="available_at" value="{{ old('available_at') }}"
-                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                                </div>
-                                <div>
-                                    <label for="unavailable_at" class="block text-gray-700 text-sm font-bold mb-2">Available Until (Optional Date/Time):</label>
-                                    <input type="datetime-local" id="unavailable_at" name="unavailable_at" value="{{ old('unavailable_at') }}"
-                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                                </div>
-                            </div>
-
-
-                            <div class="flex items-center justify-between">
-                                <button type="submit"
-                                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                        id="submitAssessmentButton">
-                                    Create Assessment
-                                </button>
-                                <a href="{{ route('courses.show', $course->id) }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
-                                    Cancel
-                                </a>
-                            </div>
-                        </form>
-                    </div>
+            {{-- Section for File Upload (Visible for Quiz, Exam, Assignment, Activity) --}}
+            <div id="fileUploadSection" class="border p-4 rounded-md bg-gray-50 mb-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Upload Assessment File (Optional)</h3>
+                <div class="mb-4">
+                    <label for="assessment_file" class="block text-gray-700 text-sm font-bold mb-2">Upload File (e.g., PDF, Word, Excel for questions/briefs):</label>
+                    <input type="file" id="assessment_file" name="assessment_file"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="mt-1 text-sm text-gray-500">PDF, Word, Excel, PPT, TXT, ZIP, RAR (Max 20MB). Leave blank for text-only activities or if using online question builder.</p>
                 </div>
             </div>
-        </div>
+
+            {{-- Section for Quiz/Exam Specific Settings (Duration, Access Code) --}}
+            <div id="quizSpecificSection" class="border p-4 rounded-md bg-gray-50 mb-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Quiz/Exam Settings</h3>
+                <div class="mb-4">
+                    <label for="duration_minutes" class="block text-gray-700 text-sm font-bold mb-2">Duration in Minutes (Optional):</label>
+                    <input type="number" id="duration_minutes" name="duration_minutes" value="{{ old('duration_minutes') }}"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0">
+                </div>
+                <div class="mb-4">
+                    <label for="access_code" class="block text-gray-700 text-sm font-bold mb-2">Access Code (Optional):</label>
+                    <input type="text" id="access_code" name="access_code" value="{{ old('access_code') }}"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <p class="mt-1 text-sm text-gray-500">Students need this code to unlock the assessment.</p>
+                </div>
+            </div>
+
+            <div id="questionBuilderSection" class="border p-4 rounded-md bg-blue-50 mb-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Online Quiz/Exam Questions</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Build your questions directly here. You can add multiple choice, identification, or true/false questions.
+                </p>
+
+                <div id="questionsContainer" class="space-y-6">
+                    {{-- Questions will be appended here by JavaScript --}}
+                </div>
+
+                <button type="button" id="addQuestionButton"
+                        class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    + Add Question
+                </button>
+            </div>
+
+            {{-- Availability Timestamps --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="available_at" class="block text-gray-700 text-sm font-bold mb-2">Available From (Optional Date/Time):</label>
+                    <input type="datetime-local" id="available_at" name="available_at" value="{{ old('available_at') }}"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label for="unavailable_at" class="block text-gray-700 text-sm font-bold mb-2">Available Until (Optional Date/Time):</label>
+                    <input type="datetime-local" id="unavailable_at" name="unavailable_at" value="{{ old('unavailable_at') }}"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            </div>
+
+
+            <div class="flex items-center justify-between">
+                <button type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        id="submitAssessmentButton">
+                    Create Assessment
+                </button>
+                <a href="{{ route('courses.show', $course->id) }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+                    Cancel
+                </a>
+            </div>
+        </form>
     </div>
 
     {{-- !!! BEGIN: Upload Progress Modal (Reused from Materials) !!! --}}
@@ -404,31 +386,22 @@
             form.addEventListener('submit', function(event) {
                 event.preventDefault(); // Prevent default form submission
 
-                // Function to reset button and hide modal
-                function resetSubmitButtonAndModal() {
-                    submitButton.removeAttribute('disabled');
-                    submitButton.innerText = 'Create Assessment';
-                    modal.classList.add('hidden');
-                }
-
-                // Check if the assessment type requires questions, but none are added
+                // --- Frontend Validation Before AJAX Submit ---
                 const selectedType = typeSelect.value;
                 const hasQuestions = questionsContainer.children.length > 0;
                 const hasFile = assessmentFileField.files.length > 0;
 
+                // Validate main assessment file vs. questions based on type
                 if ((selectedType === 'quiz' || selectedType === 'exam') && !hasQuestions && !hasFile) {
-                    alert('For quizzes and exams, you must either add questions using the builder or upload an assessment file.');
-                    resetSubmitButtonAndModal(); // Ensure button is re-enabled
+                    alert('For Quiz or Exam, please add at least one question using the builder OR upload an assessment file.');
+                    submitButton.removeAttribute('disabled');
+                    submitButton.innerText = 'Create Assessment';
+                    modal.classList.add('hidden');
                     return; // Stop submission
                 }
-                // If the selected type requires questions, ensure they are present or file is uploaded
-                if (selectedType === 'quiz' || selectedType === 'exam') {
-                    if (!hasQuestions && !hasFile) {
-                        alert('For Quiz or Exam, please add at least one question or upload an assessment file.');
-                        resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                        return; // Stop submission
-                    }
-                    // Validate required fields within questions
+
+                // If questions are present, validate them
+                if (hasQuestions) { // This applies to quiz/exam types where builder is shown
                     const questionItems = questionsContainer.querySelectorAll('.question-item');
                     for (const item of questionItems) {
                         const qText = item.querySelector('textarea[name$="[text]"]');
@@ -438,56 +411,57 @@
                         if (!qText.value.trim()) {
                             alert('Question text is required for all questions.');
                             qText.focus();
-                            resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                            return;
+                            return; // Stop submission
                         }
                         if (!qPoints.value.trim() || parseInt(qPoints.value) < 1) {
                             alert('Points are required and must be at least 1 for all questions.');
                             qPoints.focus();
-                            resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                            return;
+                            return; // Stop submission
                         }
 
                         const selectedQType = qTypeSelect.value;
                         if (selectedQType === 'multiple_choice') {
-                            let hasCorrectOption = false;
-                            const optionsInputs = item.querySelectorAll('.multiple-choice-options input[type="text"]');
-                            const radioButtons = item.querySelectorAll('.multiple-choice-options input[type="radio"]');
+                            // Check if required options (first two) have text
+                            const optionsInputs = item.querySelectorAll('.multiple-choice-options input[type="text"][required]');
                             for (let i = 0; i < optionsInputs.length; i++) {
-                                if (optionsInputs[i].hasAttribute('required') && !optionsInputs[i].value.trim()) {
+                                if (!optionsInputs[i].value.trim()) {
                                     alert(`Option ${String.fromCharCode(65 + i)} text is required for multiple choice questions.`);
                                     optionsInputs[i].focus();
-                                    resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                                    return;
-                                }
-                                if (radioButtons[i].checked) {
-                                    hasCorrectOption = true;
+                                    return; // Stop submission
                                 }
                             }
-                            if (!hasCorrectOption) {
+                            // Check if at least one radio button is checked for correct option
+                            const radioButtons = item.querySelectorAll('.multiple-choice-options input[type="radio"]');
+                            let checkedRadio = false;
+                            for (const radio of radioButtons) {
+                                if (radio.checked) {
+                                    checkedRadio = true;
+                                    break;
+                                }
+                            }
+                            if (!checkedRadio) {
                                 alert('Please select a correct option for all multiple choice questions.');
-                                resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                                return;
+                                return; // Stop submission
                             }
+
                         } else if (selectedQType === 'identification') {
                             const answerInput = item.querySelector('.identification-answer input');
-                            if (!answerInput.value.trim()) {
+                            if (!answerInput || !answerInput.value.trim()) {
                                 alert('Correct answer text is required for identification questions.');
-                                answerInput.focus();
-                                resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                                return;
+                                if (answerInput) answerInput.focus();
+                                return; // Stop submission
                             }
                         } else if (selectedQType === 'true_false') {
                             const answerSelect = item.querySelector('.true-false-answer select');
-                            if (!answerSelect.value) {
+                            if (!answerSelect || !answerSelect.value) {
                                 alert('Please select a correct answer for true/false questions.');
-                                answerSelect.focus();
-                                resetSubmitButtonAndModal(); // Ensure button is re-enabled
-                                return;
+                                if (answerSelect) answerSelect.focus();
+                                return; // Stop submission
                             }
                         }
                     }
                 }
+                // --- End Frontend Validation ---
 
 
                 // Disable the submit button and show the modal
@@ -503,17 +477,17 @@
                 const xhr = new XMLHttpRequest();
 
                 xhr.open('POST', form.action);
-                // Ensure CSRF token is correctly sent. This assumes a meta tag in your layout.
                 const csrfToken = document.querySelector('meta[name="csrf-token"]');
                 if (csrfToken) {
                     xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken.getAttribute('content'));
                 } else {
                     alert('CSRF token missing. Please ensure your layout has <meta name="csrf-token" content="{{ csrf_token() }}">');
-                    resetSubmitButtonAndModal(); // Ensure button is re-enabled
+                    submitButton.removeAttribute('disabled');
+                    submitButton.innerText = 'Create Assessment';
+                    modal.classList.add('hidden');
                     return;
                 }
 
-                // Progress event handler
                 xhr.upload.onprogress = function(event) {
                     if (event.lengthComputable) {
                         const percentComplete = (event.loaded / event.total) * 100;
@@ -522,34 +496,28 @@
                     }
                 };
 
-                // Load (completion) event handler
                 xhr.onload = function() {
-                    resetSubmitButtonAndModal(); // Hide modal and re-enable button on completion
+                    modal.classList.add('hidden');
+                    submitButton.removeAttribute('disabled');
+                    submitButton.innerText = 'Create Assessment';
 
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        // Success: Redirect to the courses show page
-                        window.location.href = "{{ route('courses.show', $course->id) }}";
+                        window.location.href = "{{ route('courses.show', $course->id) }}"; // Redirect to course show page
                     } else {
-                        // Error: Handle validation errors or server errors
                         let errorMessage = 'An error occurred during assessment creation.';
                         try {
                             const response = JSON.parse(xhr.responseText);
                             if (response.message) {
                                 errorMessage = response.message;
                             }
-                            // If Laravel validation fails (status 422), it returns JSON errors for XHR.
                             if (xhr.status === 422 && response.errors) {
                                 let validationErrors = '';
                                 for (const field in response.errors) {
                                     const readableFieldName = field.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-                                    response.errors[field].forEach(msg => {
-                                        validationErrors += `- ${readableFieldName}: ${msg}\n`;
-                                    });
+                                    validationErrors += `${readableFieldName}:\n` + response.errors[field].join('\n') + '\n';
                                 }
                                 alert('Validation Errors:\n' + validationErrors);
-                                // Reload to show old input and Laravel's flash errors
-                                // This is a fallback; ideally, you'd update the #form-errors div
-                                window.location.href = window.location.href;
+                                window.location.href = window.location.href; // Reload to show old input and Laravel's flash errors
                             } else {
                                 alert(errorMessage + ' Please check your input and try again.');
                                 window.location.href = window.location.href; // Reload on other errors too
@@ -563,78 +531,16 @@
                     }
                 };
 
-                // Error handler (network errors, etc.)
                 xhr.onerror = function() {
-                    resetSubmitButtonAndModal(); // Hide modal and re-enable button on error
+                    modal.classList.add('hidden');
+                    submitButton.removeAttribute('disabled');
+                    submitButton.innerText = 'Create Assessment';
                     alert('Network error or server unreachable. Please try again.');
                     window.location.href = window.location.href;
                 };
 
                 xhr.send(formData);
             });
-
-            // Handle old input for questions (in case of validation errors on full page reload)
-            @if(old('questions'))
-                @foreach(old('questions') as $index => $question)
-                    // Temporarily set questionCounter to match the old input index
-                    questionCounter = {{ $index }};
-                    addQuestion(); // Add a new question based on old data
-                    const lastQuestion = questionsContainer.lastElementChild;
-
-                    // Set question type
-                    const typeSelectInOld = lastQuestion.querySelector('.question-type-select');
-                    if (typeSelectInOld) {
-                        typeSelectInOld.value = '{{ $question['type'] ?? '' }}';
-                        // Trigger change to update specific fields for this question
-                        typeSelectInOld.dispatchEvent(new Event('change'));
-                    }
-
-                    // Set question text
-                    const textAreaInOld = lastQuestion.querySelector('textarea[name*="[text]"]');
-                    // Use JSON.parse(JSON.stringify(...)) to safely handle quotes in old() text
-                    if (textAreaInOld) textAreaInOld.value = JSON.parse(JSON.stringify(`{{ $question['text'] ?? '' }}`));
-
-                    // Set points
-                    const pointsInputInOld = lastQuestion.querySelector('input[name*="[points]"]');
-                    if (pointsInputInOld) pointsInputInOld.value = '{{ $question['points'] ?? 1 }}';
-
-                    // Set type-specific fields after a small delay to ensure DOM is ready
-                    setTimeout(function() {
-                        @if(isset($question['correct_answer_identification']))
-                            const idInput = lastQuestion.querySelector('input[name*="[correct_answer_identification]"]');
-                            if(idInput) idInput.value = JSON.parse(JSON.stringify(`{{ $question['correct_answer_identification'] }}`));
-                        @endif
-
-                        @if(isset($question['correct_answer_true_false']))
-                            const tfSelect = lastQuestion.querySelector('select[name*="[correct_answer_true_false]"]');
-                            if(tfSelect) {
-                                tfSelect.value = '{{ $question['correct_answer_true_false'] }}';
-                                // Trigger change to update hidden index for True/False
-                                // This part is not directly needed for saving, but ensures UI consistency
-                                const hiddenTfIndex = lastQuestion.querySelector('input[name*="[correct_option_index]"][type="hidden"]');
-                                if (hiddenTfIndex) {
-                                    hiddenTfIndex.value = tfSelect.value === 'true' ? '0' : '1';
-                                }
-                            }
-                        @endif
-
-                        @if(isset($question['correct_option_index']))
-                            const mcCorrectRadio = lastQuestion.querySelector(`input[name*="[correct_option_index]"][value="{{ $question['correct_option_index'] }}"]`);
-                            if(mcCorrectRadio) mcCorrectRadio.checked = true;
-                        @endif
-
-                        @if(isset($question['options']))
-                            @foreach($question['options'] as $optionIndex => $option)
-                                const optionInput = lastQuestion.querySelector('input[name*="[options][{{ $optionIndex }}][text]"]');
-                                if(optionInput) optionInput.value = JSON.parse(JSON.stringify(`{{ $option['text'] ?? '' }}`));
-                            @endforeach
-                        @endif
-                    }, 150); // Small delay
-                @endforeach
-                // After loading all old questions, update the questionCounter to the next available index
-                questionCounter = questionsContainer.children.length;
-                updateQuestionNumbers(); // Ensure final indexing is correct
-            @endif
         });
     </script>
 </x-layout>
