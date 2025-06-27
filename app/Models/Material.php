@@ -43,7 +43,7 @@ class Material extends Model
     {
         return $this->belongsTo(Course::class);
     }
-    public function assessment() {
+    public function assessments() {
         return $this->hasMany(Assessment::class);
     }
 

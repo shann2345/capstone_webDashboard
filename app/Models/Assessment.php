@@ -14,6 +14,7 @@ class Assessment extends Model
 
     protected $fillable = [
         'course_id',
+        'material_id',
         'title',
         'description',
         'encrypted_file_path', // <-- ADDED: For uploaded quiz/exam files
@@ -57,15 +58,8 @@ class Assessment extends Model
      */
     public function isAvailable(): bool
     {
-        $now = now(); // Gets the current Carbon instance (server time)
-
-        // Check if available_at is null OR available_at is less than or equal to now
-        $isAvailableFrom = is_null($this->available_at) || $this->available_at->lte($now);
-
-        // Check if unavailable_at is null OR unavailable_at is greater than or equal to now
-        $isAvailableUntil = is_null($this->unavailable_at) || $this->unavailable_at->gte($now);
-
-        // Material is available if both conditions are true
-        return $isAvailableFrom && $isAvailableUntil;
+        $now = now();
+        return ($this->available_at === null || $now->greaterThanOrEqualTo($this->available_at)) &&
+               ($this->unavailable_at === null || $now->lessThanOrEqualTo($this->unavailable_at));
     }
 }

@@ -87,7 +87,7 @@ class MaterialController extends Controller
         $material->save();
 
         // 4. Redirect back with success message
-        return redirect()->route('materials.create', $course->id)->with('success', 'Material uploaded successfully!');
+        return redirect()->route('courses.show', $course->id)->with('success', 'Material uploaded successfully!');
     }
 
     /**

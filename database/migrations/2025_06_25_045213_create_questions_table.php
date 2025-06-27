@@ -11,7 +11,9 @@ return new class extends Migration
     {
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('assessment_id')->constrained('assessments')->onDelete('cascade');
+            $table->foreignId('assessment_id')
+                  ->constrained('assessments')
+                  ->onDelete('cascade');
             $table->text('question_text');
             $table->enum('question_type', ['multiple_choice', 'identification', 'true_false', 'essay']);
             $table->integer('points')->default(1); // Default to 1 point per question

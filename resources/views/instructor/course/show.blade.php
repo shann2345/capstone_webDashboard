@@ -1,9 +1,14 @@
-{{-- resources/views/courses/show.blade.php --}}
-
 <x-layout>
     <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ $course->title }} ({{ $course->course_code }})</h1>
     <p class="text-gray-600 mb-2">Program: {{ $course->program->name ?? 'N/A' }}</p>
     <p class="text-gray-600 mb-4">Instructor: {{ $course->instructor->name ?? 'N/A' }}</p>
+
+    {{-- Display success message --}}
+    @if (session('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
 
     {{-- Global Dropdown Button for Adding Activity/Resource --}}
     <div class="flex justify-end mb-8">
@@ -36,7 +41,6 @@
     {{-- List Existing Materials --}}
     <div class="bg-white p-6 rounded-lg shadow-md mb-8">
         <h2 class="text-2xl font-semibold text-gray-700 mb-4">Materials</h2>
-        {{-- CHANGED: Use $course->materials instead of $materials --}}
         @if ($course->materials->isEmpty())
             <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative text-center" role="alert">
                 <span class="block sm:inline">No materials have been uploaded for this course yet.</span>
@@ -54,7 +58,6 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {{-- CHANGED: Use $course->materials instead of $materials --}}
                         @foreach ($course->materials as $material)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -88,14 +91,14 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {{ $material->created_at->format('M d, Y') }}
                                 </td>
-                                {{-- MODIFIED: Actions Column with new dropdown below existing links --}}
+                                {{-- Actions Column with new dropdown below existing links --}}
                                 <td class="px-6 py-4 text-right text-sm font-medium">
-                                    <div class="flex justify-end items-center mb-2"> {{-- Added flex for alignment --}}
+                                    <div class="flex justify-end items-center mb-2">
                                         @if($material->file_path)
                                             <a href="{{ route('materials.download', $material->id) }}" class="text-blue-600 hover:text-blue-900 mr-4">Download</a>
                                         @endif
                                         <a href="#" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
-                                        <form action="#" method="POST" class="inline-block"> {{-- Changed to inline-block --}}
+                                        <form action="#" method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
@@ -103,7 +106,7 @@
                                     </div>
                                     {{-- NEW: Per-Material Add Assessment Dropdown --}}
                                     <div class="relative inline-block text-left mt-2">
-                                        <div>
+                                        <div> {{-- This div wraps the button --}}
                                             <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 material-add-button" data-material-id="{{ $material->id }}" aria-expanded="true" aria-haspopup="true">
                                                 Add Assessment
                                                 <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -112,12 +115,14 @@
                                             </button>
                                         </div>
 
+                                        {{-- This is the menu div, sibling to the button's wrapper div --}}
                                         <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 material-add-menu" role="menu" aria-orientation="vertical" tabindex="-1">
                                             <div class="py-1" role="none">
+                                                {{-- Pass course_id AND material_id to the create assessment form --}}
                                                 <a href="{{ route('assessments.create', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
                                                     <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Quiz/Activity
                                                 </a>
-                                                {{-- Add more assessment types here if needed --}}
+                                                {{-- Add more assessment types here if needed, linking to createAssessment with this material_id --}}
                                             </div>
                                         </div>
                                     </div>
@@ -130,7 +135,7 @@
         @endif
     </div>
 
-    {{-- Section to list standalone Assessments
+    {{-- Section to list standalone Assessments --}}
     <div class="bg-white p-6 rounded-lg shadow-md mb-8">
         <h2 class="text-2xl font-semibold text-gray-700 mb-4">Assessments (Independent)</h2>
         @if ($independentAssessments->isEmpty())
@@ -165,6 +170,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     @if($assessment->material)
+                                        {{-- Link to material's show page if you have one, otherwise just display title --}}
                                         <a href="#" class="text-blue-600 hover:text-blue-900">{{ $assessment->material->title }}</a>
                                     @else
                                         N/A (Independent)
@@ -187,7 +193,7 @@
                 </table>
             </div>
         @endif
-    </div> --}}
+    </div>
 
 
     <div class="flex justify-end mt-6">
@@ -196,50 +202,59 @@
         </a>
     </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // --- Global "Add Activity/Resource" Dropdown ---
-        const globalMenuButton = document.getElementById('global-add-menu-button');
-        const globalAddMenu = document.getElementById('globalAddMenu');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Global "Add Activity/Resource" Dropdown ---
+            const globalMenuButton = document.getElementById('global-add-menu-button');
+            const globalAddMenu = document.getElementById('globalAddMenu');
 
-        if (globalMenuButton && globalAddMenu) {
-            globalMenuButton.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevents this click from closing other dropdowns or the window listener
-                globalAddMenu.classList.toggle('hidden');
-            });
-        }
-
-        // --- Per-Material "Add Assessment" Dropdowns ---
-        const materialAddButtons = document.querySelectorAll('.material-add-button');
-        materialAddButtons.forEach(button => {
-            button.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevent document click from immediately closing
-                const menu = this.nextElementSibling; // Get the next sibling, which is the menu div
-                // Close any other open material menus
-                document.querySelectorAll('.material-add-menu').forEach(openMenu => {
-                    if (openMenu !== menu) {
-                        openMenu.classList.add('hidden');
-                    }
+            if (globalMenuButton && globalAddMenu) {
+                globalMenuButton.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevents this click from closing other dropdowns or the window listener
+                    globalAddMenu.classList.toggle('hidden');
                 });
-                menu.classList.toggle('hidden');
-            });
-        });
-
-        // Close all dropdowns if the user clicks outside of any dropdown button or menu
-        window.addEventListener('click', function(event) {
-            // Close global menu
-            if (globalMenuButton && globalAddMenu && !globalMenuButton.contains(event.target) && !globalAddMenu.contains(event.target)) {
-                globalAddMenu.classList.add('hidden');
             }
 
-            // Close all material menus
-            document.querySelectorAll('.material-add-menu').forEach(menu => {
-                const button = menu.previousElementSibling; // Get the button associated with this menu
-                if (!button.contains(event.target) && !menu.contains(event.target)) {
-                    menu.classList.add('hidden');
+            // --- Per-Material "Add Assessment" Dropdowns ---
+            const materialAddButtons = document.querySelectorAll('.material-add-button');
+            materialAddButtons.forEach(button => {
+                button.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent document click from immediately closing
+
+                    // CRITICAL CHANGE: Get the menu element correctly based on your HTML structure.
+                    // The button is inside a div, and the menu is a sibling of that div.
+                    const menu = this.parentElement.nextElementSibling; // Get parent div of button, then its next sibling
+
+                    // Close any other open material menus
+                    document.querySelectorAll('.material-add-menu').forEach(openMenu => {
+                        if (openMenu !== menu) { // Only hide if it's a different menu
+                            openMenu.classList.add('hidden');
+                        }
+                    });
+                    menu.classList.toggle('hidden'); // Toggle the clicked menu
+                });
+            });
+
+            // Close all dropdowns if the user clicks outside of any dropdown button or menu
+            window.addEventListener('click', function(event) {
+                // Close global menu
+                if (globalMenuButton && globalAddMenu && !globalMenuButton.contains(event.target) && !globalAddMenu.contains(event.target)) {
+                    globalAddMenu.classList.add('hidden');
                 }
+
+                // Close all material menus
+                document.querySelectorAll('.material-add-menu').forEach(menu => {
+                    // The menu's parent is the 'relative inline-block' div.
+                    // The button's parent is the 'div' inside that 'relative inline-block' div.
+                    // We need to check if the click target is within the button's direct parent, or the menu itself.
+                    const menuContainer = menu.parentElement;
+                    const buttonWrapper = menuContainer ? menuContainer.querySelector('.material-add-button').parentElement : null; // Get the div wrapping the button
+
+                    if (buttonWrapper && !buttonWrapper.contains(event.target) && !menu.contains(event.target)) {
+                        menu.classList.add('hidden');
+                    }
+                });
             });
         });
-    });
-</script>
+    </script>
 </x-layout>

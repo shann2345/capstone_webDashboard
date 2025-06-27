@@ -80,8 +80,10 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    Route::get('/course/{course}/assessment', [AssessmentController::class, 'create'])->name('assessments.create');
-    Route::post('/course/{course}/assessment', [AssessmentController::class, 'store'])->name('assessments.store');
+    Route::get('/course/{course}/assessments/create', [AssessmentController::class, 'create'])->name('assessments.create');
+    Route::post('/course/{course}/assessments', [AssessmentController::class, 'store'])->name('assessments.store');
+    // Route::get('/courses/{course}/assessments', [AssessmentController::class, 'index'])->name('assessments.index');
+    Route::get('/assessments/{assessment}/download', [AssessmentController::class, 'download'])->name('assessments.download');
     
 
 });
