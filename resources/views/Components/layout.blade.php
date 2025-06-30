@@ -85,5 +85,6 @@
             <?php echo $slot ?>
         </main>
     </div>
+    {{ $scripts ?? '' }}
 </body>
 </html>

@@ -9,20 +9,33 @@ class QuestionOption extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     * These must match your database columns.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'question_id',
         'option_text',
-        'is_correct',
-        'order',
+        'option_order',
     ];
 
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
-        'is_correct' => 'boolean',
+        'option_order' => 'integer',
     ];
 
-    // Define the relationship to the Question
+    /**
+     * Get the question that the option belongs to.
+     */
     public function question()
     {
         return $this->belongsTo(Question::class);
     }
 }
+

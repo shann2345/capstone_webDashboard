@@ -80,10 +80,11 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    Route::get('/course/{course}/assessments/create', [AssessmentController::class, 'create'])->name('assessments.create');
-    Route::post('/course/{course}/assessments', [AssessmentController::class, 'store'])->name('assessments.store');
-    // Route::get('/courses/{course}/assessments', [AssessmentController::class, 'index'])->name('assessments.index');
-    Route::get('/assessments/{assessment}/download', [AssessmentController::class, 'download'])->name('assessments.download');
+    Route::get('/courses/{course}/assessments/create/quiz', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
+    Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');
+
+    Route::get('/courses/{course}/assessments/create/assignment', [AssessmentController::class, 'createAssignment'])->name('assessments.create.assignment');
+    Route::post('/courses/{course}/assessments/store/assignment', [AssessmentController::class, 'storeAssignment'])->name('assessments.store.assignment');
     
 
 });

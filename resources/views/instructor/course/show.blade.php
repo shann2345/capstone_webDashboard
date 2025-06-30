@@ -25,10 +25,13 @@
             <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10" role="menu" aria-orientation="vertical" aria-labelledby="global-add-menu-button" tabindex="-1" id="globalAddMenu">
                 <div class="py-1" role="none">
                     <a href="{{ route('materials.create', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                        <span class="inline-block w-5 mr-2 text-center">&#128193;</span> Add Material/Resource
+                        <span class="inline-block w-5 mr-2 text-center">&#128193;</span> Material/Resource
                     </a>
-                    <a href="{{ route('assessments.create', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Quiz/Activity (Independent)
+                    <a href="{{ route('assessments.create.quiz', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Quiz/Exam
+                    </a>
+                    <a href="{{ route('assessments.create.assignment', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Activity/Project
                     </a>
                 </div>
             </div>
@@ -119,8 +122,11 @@
                                         <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 material-add-menu" role="menu" aria-orientation="vertical" tabindex="-1">
                                             <div class="py-1" role="none">
                                                 {{-- Pass course_id AND material_id to the create assessment form --}}
-                                                <a href="{{ route('assessments.create', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Quiz/Activity
+                                                <a href="{{ route('assessments.create.quiz', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Quiz/Exam
+                                                </a>
+                                                <a href="{{ route('assessments.create.assignment', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Activity/Project
                                                 </a>
                                                 {{-- Add more assessment types here if needed, linking to createAssessment with this material_id --}}
                                             </div>

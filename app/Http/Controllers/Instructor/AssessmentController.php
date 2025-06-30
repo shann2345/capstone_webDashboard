@@ -2,212 +2,266 @@
 
 namespace App\Http\Controllers\Instructor;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Course;
 use App\Models\Assessment;
-use App\Models\Question; // NEW: Import Question model
-use App\Models\QuestionOption; // NEW: Import QuestionOption model
-use App\Models\Material; // NEW: Import Material model for material_id validation
+use App\Models\Course;
+use App\Models\Question;
+use App\Models\QuestionOption;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Response;
-use Illuminate\Support\Facades\DB; // NEW: For database transactions
-use Illuminate\Support\Facades\Auth; // For Auth::user() check in download method
-use Illuminate\Support\Facades\Log; // For logging errors
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class AssessmentController extends Controller
 {
     /**
-     * Display a listing of assessments for a specific course.
-     * This method is called by assessments.index route, though in new flow
-     * assessments are primarily viewed on courses.show. This might be less used.
-     */
-    public function index(Course $course)
-    {
-        // Eager load material relationship for assessments to show material title if linked
-        $assessments = $course->assessments()->with('material')->latest()->get();
-        return view('instructor.assessment.createAssessment', compact('course', 'assessments'));
-    }
-
-    /**
-     * Show the form for creating a new assessment for a specific course.
-     * Can receive a 'material_id' query parameter to pre-select a material.
+     * Show the form for creating a new Quiz or Exam assessment.
+     * This form includes the question builder.
      *
      * @param  \App\Models\Course  $course
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\View\View
      */
-    public function create(Course $course, Request $request)
+    public function createQuiz(Course $course)
     {
-        // Load materials for the dropdown list in the form
-        $course->load('materials');
-
-        // Get material_id from query parameters if present (e.g., when clicking "Add Assessment" from a material row)
-        $selectedMaterialId = $request->query('material_id');
-
-        return view('instructor.assessment.createAssessment', compact('course', 'selectedMaterialId'));
+        $course->load('materials'); // Eager load materials for dropdown
+        // Pass a default type to the view for consistency
+        $assessmentType = 'quiz';
+        return view('instructor.assessment.createQuiz', compact('course', 'assessmentType'));
     }
-
-    /**
-     * Store a newly created assessment (and its questions/options) in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function store(Request $request, Course $course)
+    public function storeQuiz(Request $request, $courseId)
     {
-        Log::info('Request Data:', $request->all());
-        // Use a database transaction to ensure atomicity (all or nothing)
-        return DB::transaction(function () use ($request, $course) {
-            // 1. Validate the main assessment data
-            $validatedData = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'material_id' => 'nullable|exists:materials,id', // Validate if material_id exists and is valid
-                'type' => 'required|in:quiz,activity,exam,assignment,other', // Matches enum in migration
-                'available_at' => 'nullable|date_format:Y-m-d\TH:i', // Matches datetime-local input format
-                // Ensure unavailable_at is after or equal to available_at if both are provided
-                'unavailable_at' => 'nullable|date_format:Y-m-d\TH:i|after_or_equal:available_at',
-                'duration_minutes' => 'nullable|integer|min:0',
-                'access_code' => 'nullable|string|max:255|unique:assessments,access_code', // Unique across assessments table
-                'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xlsx,xls,ppt,pptx,txt,zip,rar|max:20480', // Max 20MB
-            ]);
+        Log::info($request->all());
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'material_id' => 'nullable|exists:materials,id',
+            'duration_minutes' => 'nullable|integer|min:0',
+            'access_code' => 'nullable|string|max:255',
+            'assessment_file' => 'nullable|file|max:20480', // 20MB
+            'available_at' => 'nullable|date',
+            'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+            'questions' => 'nullable|array',
+            'questions.*.question_type' => 'required_with:questions|string|in:multiple_choice,identification,true_false',
+            'questions.*.question_text' => 'required_with:questions|string',
+            'questions.*.points' => 'required_with:questions|integer|min:1',
+        ]);
 
-            $encryptedFilePath = null;
-            $originalFilename = null;
+        // Handle file upload if present
+        $filePath = null;
+        if ($request->hasFile('assessment_file')) {
+            $filePath = $request->file('assessment_file')->store('assessments', 'public');
+        }
 
-            // 2. Handle file upload and encryption if a file is provided
-            if ($request->hasFile('assessment_file')) {
-                $file = $request->file('assessment_file');
-                $originalFilename = $file->getClientOriginalName();
-                $extension = $file->getClientOriginalExtension();
+        // Create the assessment
+        $assessment = \App\Models\Assessment::create([
+            'course_id' => $courseId,
+            'material_id' => $validated['material_id'] ?? null,
+            'title' => $validated['title'],
+            'type' => $request->input('type', 'quiz'),
+            'description' => $validated['description'] ?? null,
+            'assessment_file_path' => $filePath,
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'access_code' => $validated['access_code'] ?? null,
+            'available_at' => $validated['available_at'] ?? null,
+            'unavailable_at' => $validated['unavailable_at'] ?? null,
+            'created_by' => Auth::id(),
+        ]);
 
-                $fileContent = file_get_contents($file->getRealPath());
-                $encryptedContent = Crypt::encryptString($fileContent); // Encrypt the content
-
-                // Define storage path: 'assessments/encrypted/{course_id}/'
-                $fileName = Str::slug(pathinfo($originalFilename, PATHINFO_FILENAME)) . '-' . time() . '.' . $extension . '.encrypted';
-                $directory = 'assessments/encrypted/' . $course->id;
-
-                Storage::disk('local')->put($directory . '/' . $fileName, $encryptedContent); // Store encrypted content
-                $encryptedFilePath = $directory . '/' . $fileName; // Store relative path in DB
-            }
-
-            // 3. Create the main Assessment record
-            $assessment = Assessment::create([
-                'course_id'           => $course->id, // Linked via route model binding
-                'material_id'         => $validatedData['material_id'] ?? null, // Use null if not provided
-                'title'               => $validatedData['title'],
-                'description'         => $validatedData['description'],
-                'encrypted_file_path' => $encryptedFilePath,
-                'original_filename'   => $originalFilename,
-                'type'                => $validatedData['type'],
-                // Parse dates to Carbon instances only if they are not null
-                'available_at'        => $validatedData['available_at'] ? now()->parse($validatedData['available_at']) : null,
-                'unavailable_at'      => $validatedData['unavailable_at'] ? now()->parse($validatedData['unavailable_at']) : null,
-                'duration_minutes'    => $validatedData['duration_minutes'],
-                'access_code'         => $validatedData['access_code'],
-            ]);
-
-            // 4. Handle nested questions data if assessment type is quiz or exam AND questions are provided
-            if (($assessment->type === 'quiz' || $assessment->type === 'exam') && $request->has('questions')) {
-                // Validate questions specific to quizzes/exams
-                $request->validate([
-                    'questions' => 'required|array|min:1', // At least one question if using builder
-                    'questions.*.type' => 'required|in:multiple_choice,identification,true_false',
-                    'questions.*.text' => 'required|string',
-                    'questions.*.points' => 'required|integer|min:1',
-
-                    // Conditional validation for multiple choice options
-                    'questions.*.correct_option_index' => 'required_if:questions.*.type,multiple_choice|integer|min:0',
-                    'questions.*.options' => 'required_if:questions.*.type,multiple_choice|array|min:2', // At least 2 options for MC
-                    'questions.*.options.*.text' => 'required_if:questions.*.type,multiple_choice|string', // Text for each option
-
-                    // Conditional validation for identification answer
-                    'questions.*.correct_answer_identification' => 'required_if:questions.*.type,identification|string',
-
-                    // Conditional validation for true/false answer
-                    'questions.*.correct_answer_true_false' => 'required_if:questions.*.type,true_false|in:true,false',
+        // Save questions if present
+        if ($request->has('questions')) {
+            foreach ($request->input('questions') as $order => $q) {
+                $question = new \App\Models\Question([
+                    'assessment_id' => $assessment->id,
+                    'question_text' => $q['question_text'],
+                    'question_type' => $q['question_type'],
+                    'points' => $q['points'],
+                    'order' => $order,
                 ]);
 
-                foreach ($request->input('questions') as $index => $questionData) {
-                    $question = $assessment->questions()->create([
-                        'question_text' => $questionData['text'],
-                        'question_type' => $questionData['type'],
-                        'points'        => $questionData['points'],
-                        'order'         => $index, // Save the order of questions as submitted
-                        'correct_answer_text' => match($questionData['type']) {
-                            'identification' => $questionData['correct_answer_identification'] ?? null,
-                            'true_false'     => $questionData['correct_answer_true_false'] ?? null,
-                            default          => null, // Multiple choice answers are handled in question_options
-                        },
-                    ]);
+                // Handle correct_answer and options
+                if ($q['question_type'] === 'multiple_choice') {
+                    // Save correct answer as the selected option index
+                    $question->correct_answer = $q['correct_answer'];
+                    $question->save();
 
-                    // If it's a multiple choice question, save options
-                    if ($questionData['type'] === 'multiple_choice' || $questionData['type'] === 'true_false') {
-                        $correctOptionIndex = (int)($questionData['correct_option_index'] ?? -1); // Cast to int
-                        if (isset($questionData['options']) && is_array($questionData['options'])) {
-                            foreach ($questionData['options'] as $optionIndex => $optionTextData) {
-                                // Ensure 'text' key exists and is not empty if it's a required option
-                                if (isset($optionTextData['text'])) {
-                                    $question->options()->create([
-                                        'option_text' => $optionTextData['text'],
-                                        'is_correct'  => ($optionIndex === $correctOptionIndex),
-                                        'order'       => $optionIndex, // Save the order of options
-                                    ]);
-                                }
+                    // Save options
+                    if (isset($q['options']) && is_array($q['options'])) {
+                        foreach ($q['options'] as $opt) {
+                            if (!empty($opt['option_text'])) {
+                                \App\Models\QuestionOption::create([
+                                    'question_id' => $question->id,
+                                    'option_text' => $opt['option_text'],
+                                    'option_order' => $opt['option_order'],
+                                ]);
                             }
                         }
                     }
+                } elseif ($q['question_type'] === 'identification') {
+                    $question->correct_answer = $q['correct_answer'];
+                    $question->save();
+                } elseif ($q['question_type'] === 'true_false') {
+                    $question->correct_answer = $q['correct_answer']; // 'true' or 'false'
+                    $question->save();
+                } else {
+                    $question->save();
                 }
             }
+        }
 
-            // 5. Redirect with success message
-            return redirect()->route('courses.show', $course->id)->with('success', 'Assessment created successfully!');
-        }); // End of DB::transaction
+        return response()->json(['success' => true, 'redirect' => route('courses.show', $courseId)]);
     }
 
     /**
-     * Download a specific assessment file (decrypts on the fly).
+     * Show the form for creating a new Assignment or Activity assessment.
+     * This form is simpler, focusing on description and file upload.
      *
-     * @param  \App\Models\Assessment  $assessment
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\RedirectResponse
+     * @param  \App\Models\Course  $course
+     * @return \Illuminate\View\View
      */
-    public function download(Assessment $assessment)
+    public function createAssignment(Course $course)
     {
-        // 1. Check if the assessment file path exists and the file is actually stored
-        if (!$assessment->encrypted_file_path || !Storage::disk('local')->exists($assessment->encrypted_file_path)) {
-            return back()->with('error', 'Assessment file not found or corrupted.');
-        }
+        $course->load('materials');
+        // Pass a default type to the view for consistency
+        $assessmentType = 'assignment'; // Or 'activity'
+        return view('instructor.assessment.createAssignment', compact('course', 'assessmentType'));
+    }
 
-        // 2. Basic access check (enhance this as needed for student roles)
-        // For students, you'd check enrollment, availability, and maybe an access code if applicable.
-        if (Auth::check() && Auth::user()->role !== 'instructor') { // Example for non-instructors
-            if (!$assessment->isAvailable()) {
-                return back()->with('error', 'This assessment is not currently available for download.');
-            }
-            // Add checks for access code here if needed
-        }
-
-        // 3. Read and decrypt the file content
+    /**
+     * Store a newly created Assignment or Activity assessment.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Course  $course
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeAssignment(Request $request, Course $course)
+    {
         try {
-            $encryptedContent = Storage::disk('local')->get($assessment->encrypted_file_path);
-            $decryptedContent = Crypt::decryptString($encryptedContent);
-
-            // 4. Return the decrypted content as a downloadable file
-            return Response::make($decryptedContent, 200, [
-                'Content-Type'        => \Illuminate\Support\Facades\File::mimeType($assessment->original_filename) ?? 'application/octet-stream', // Determine mime type from original filename
-                'Content-Disposition' => 'attachment; filename="' . $assessment->original_filename . '"',
+            $validatedAssessmentData = $request->validate([
+                'material_id' => 'nullable|exists:materials,id',
+                'title' => 'required|string|max:255',
+                'type' => ['required', Rule::in(['assignment', 'activity'])], // Only allow assignment/activity here
+                'description' => 'nullable|string',
+                'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:20480', // 20MB
+                'available_at' => 'nullable|date',
+                'unavailable_at' => 'nullable|date|after_or_equal:available_at',
             ]);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            return back()->with('error', 'Failed to decrypt assessment file. It might be corrupted or the encryption key has changed.');
+
+            // For assignment/activity, if no description, then file is required
+            if (empty($validatedAssessmentData['description']) && !$request->hasFile('assessment_file')) {
+                throw ValidationException::withMessages([
+                    'description' => ['For Assignment or Activity, either a description or an assessment file is required.'],
+                    'assessment_file' => ['For Assignment or Activity, either a description or an assessment file is required.'],
+                ]);
+            }
+
+            DB::beginTransaction();
+
+            $assessmentFilePath = null;
+            if ($request->hasFile('assessment_file')) {
+                $assessmentFilePath = $request->file('assessment_file')->store('assessments/' . $course->id, 'public');
+            }
+
+            $assessment = Assessment::create([
+                'course_id' => $course->id,
+                'material_id' => $validatedAssessmentData['material_id'] ?? null,
+                'title' => $validatedAssessmentData['title'],
+                'type' => $validatedAssessmentData['type'],
+                'description' => $validatedAssessmentData['description'] ?? null,
+                'assessment_file_path' => $assessmentFilePath,
+                // These fields are not relevant for simple assignments/activities
+                'duration_minutes' => null,
+                'access_code' => null,
+                'available_at' => $validatedAssessmentData['available_at'] ?? null,
+                'unavailable_at' => $validatedAssessmentData['unavailable_at'] ?? null,
+                'created_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            return response()->json(['success' => 'Assessment created successfully!', 'redirect' => route('courses.show', $course->id)]);
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            // Log the actual exception for debugging in storage/logs/laravel.log
-            Log::error("Assessment download error for ID {$assessment->id}: " . $e->getMessage());
-            return back()->with('error', 'An unexpected error occurred during download. Please try again or contact support.');
+            DB::rollBack();
+            if (isset($assessmentFilePath) && Storage::disk('public')->exists($assessmentFilePath)) {
+                Storage::disk('public')->delete($assessmentFilePath);
+            }
+            Log::error('Assignment/Activity creation failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => 'Failed to create assessment: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Show the form for creating an "Other" assessment type.
+     * This is the simplest form.
+     *
+     * @param  \App\Models\Course  $course
+     * @return \Illuminate\View\View
+     */
+    // public function createOther(Course $course)
+    // {
+    //     $course->load('materials');
+    //     $assessmentType = 'other';
+    //     return view('instructor.assessment.createOther', compact('course', 'assessmentType'));
+    // }
+
+    // /**
+    //  * Store a newly created "Other" assessment.
+    //  *
+    //  * @param  \Illuminate\Http\Request  $request
+    //  * @param  \App\Models\Course  $course
+    //  * @return \Illuminate\Http\JsonResponse
+    //  */
+    // public function storeOther(Request $request, Course $course)
+    // {
+    //     try {
+    //         $validatedAssessmentData = $request->validate([
+    //             'material_id' => 'nullable|exists:materials,id',
+    //             'title' => 'required|string|max:255',
+    //             'type' => ['required', Rule::in(['other'])], // Only allow 'other' here
+    //             'description' => 'nullable|string',
+    //             'available_at' => 'nullable|date',
+    //             'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+    //         ]);
+
+    //         DB::beginTransaction();
+
+    //         $assessment = Assessment::create([
+    //             'course_id' => $course->id,
+    //             'material_id' => $validatedAssessmentData['material_id'] ?? null,
+    //             'title' => $validatedAssessmentData['title'],
+    //             'type' => $validatedAssessmentData['type'],
+    //             'description' => $validatedAssessmentData['description'] ?? null,
+    //             'assessment_file_path' => null, // Not applicable for 'other' unless specified
+    //             'duration_minutes' => null,
+    //             'access_code' => null,
+    //             'available_at' => $validatedAssessmentData['available_at'] ?? null,
+    //             'unavailable_at' => $validatedAssessmentData['unavailable_at'] ?? null,
+    //             'created_by' => Auth::id(),
+    //         ]);
+
+    //         DB::commit();
+
+    //         return response()->json(['success' => 'Assessment created successfully!', 'redirect' => route('courses.show', $course->id)]);
+
+    //     } catch (ValidationException $e) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'message' => 'The given data was invalid.',
+    //             'errors' => $e->errors(),
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Other assessment creation failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+    //         return response()->json(['error' => 'Failed to create assessment: ' . $e->getMessage()], 500);
+    //     }
+    // }
 }

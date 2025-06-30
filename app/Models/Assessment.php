@@ -9,32 +9,34 @@ class Assessment extends Model
 {
     use HasFactory;
 
-    // By default, Laravel will assume the table name is 'assessments' (plural),
-    // which matches our migration, so no need for protected $table = 'assessments';
-
+    /**
+     * The attributes that are mass assignable.
+     * These must match your database columns.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'course_id',
         'material_id',
         'title',
-        'description',
-        'encrypted_file_path', // <-- ADDED: For uploaded quiz/exam files
-        'original_filename',   // <-- ADDED: For uploaded quiz/exam files
         'type',
-        'available_at',
-        'unavailable_at',
+        'description',
+        'assessment_file_path',
         'duration_minutes',
         'access_code',
+        'available_at',
+        'unavailable_at',
+        'created_by',
     ];
 
     /**
-     * The attributes that should be cast.
-     * These convert database fields into Carbon instances for date/time.
+     * The attributes that should be cast to native types.
      *
      * @var array<string, string>
      */
     protected $casts = [
-        'available_at' => 'datetime',   // <-- ADDED: Cast to Carbon instance
-        'unavailable_at' => 'datetime', // <-- ADDED: Cast to Carbon instance
+        'available_at' => 'datetime',
+        'unavailable_at' => 'datetime',
     ];
 
     /**
@@ -44,22 +46,29 @@ class Assessment extends Model
     {
         return $this->belongsTo(Course::class);
     }
+
+    /**
+     * Get the material that the assessment is associated with.
+     */
     public function material()
     {
-        return $this->belongsTo(Material::class);
+        return $this->belongsTo(Material::class); // Assuming you have a Material model
     }
-     public function questions()
-    {
-        return $this->hasMany(Question::class);
-    }
+
     /**
-     * Helper to check if the assessment is currently available based on its schedule.
-     * Takes into account nullable available_at/unavailable_at timestamps.
+     * Get the user (instructor) who created the assessment.
      */
-    public function isAvailable(): bool
+    public function creator()
     {
-        $now = now();
-        return ($this->available_at === null || $now->greaterThanOrEqualTo($this->available_at)) &&
-               ($this->unavailable_at === null || $now->lessThanOrEqualTo($this->unavailable_at));
+        return $this->belongsTo(User::class, 'created_by'); // Assuming your User model is for instructors
+    }
+
+    /**
+     * Get the questions for the assessment.
+     */
+    public function questions()
+    {
+        return $this->hasMany(Question::class)->orderBy('order');
     }
 }
+
