@@ -28,6 +28,9 @@
 
                         {{-- Hidden input for assessment type --}}
                         <input type="hidden" name="type" value="{{ $assessmentType }}">
+                        @if(isset($topicId))
+                            <input type="hidden" name="topic_id" value="{{ $topicId }}">
+                        @endif
 
                         {{-- Display Validation Errors --}}
                         <div id="form-errors" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
@@ -46,23 +49,6 @@
                                 </ul>
                             </div>
                         @endif
-
-                        <!-- Associated Material -->
-                        <div class="mb-4">
-                            <label for="material_id" class="block text-gray-700 text-sm font-bold mb-2">Associated Material (Optional)</label>
-                            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('material_id') border-red-500 @enderror" id="material_id" name="material_id">
-                                <option value="">No associated material</option>
-                                @foreach($course->materials as $material)
-                                    <option value="{{ $material->id }}"
-                                            {{ (old('material_id') == $material->id) ? 'selected' : '' }}>
-                                        {{ $material->title }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('material_id')
-                                <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
-                            @enderror
-                        </div>
 
                         <!-- Basic Assessment Information -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,6 +198,7 @@
                     <option value="multiple_choice">Multiple Choice</option>
                     <option value="identification">Identification</option>
                     <option value="true_false">True/False</option>
+                    <option value="essay">Essay</option>
                 </select>
             </div>
 
@@ -262,6 +249,12 @@
                         <option value="true">True</option>
                         <option value="false">False</option>
                     </select>
+                </div>
+
+                <div class="essay-answer mb-4 hidden">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Answer (Optional)</label>
+                    <input type="text" name="questions[IDX][correct_answer]" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="(Optional) Enter a sample answer for reference">
+                    <p class="mt-1 text-sm text-gray-500">Leave blank if you want to manually check and grade this essay.</p>
                 </div>
             </div>
 
@@ -332,6 +325,7 @@
                     const mcOptions = questionItem.querySelector('.multiple-choice-options');
                     const identificationAnswer = questionItem.querySelector('.identification-answer');
                     const trueFalseAnswer = questionItem.querySelector('.true-false-answer');
+                    const essayAnswer = questionItem.querySelector('.essay-answer');
 
                     // Hide all and disable their inputs
                     mcOptions.classList.add('hidden');
@@ -343,6 +337,8 @@
                     trueFalseAnswer.classList.add('hidden');
                     trueFalseAnswer.querySelectorAll('input,select').forEach(el => el.disabled = true);
 
+                    essayAnswer.classList.add('hidden');
+                    essayAnswer.querySelectorAll('input,select').forEach(el => el.disabled = true);
 
                     // Show and enable only the relevant fields
                     if (selectedQuestionType === 'multiple_choice') {
@@ -354,6 +350,9 @@
                     } else if (selectedQuestionType === 'true_false') {
                         trueFalseAnswer.classList.remove('hidden');
                         trueFalseAnswer.querySelectorAll('input,select').forEach(el => el.disabled = false);
+                    } else if (selectedQuestionType === 'essay') {
+                        essayAnswer.classList.remove('hidden');
+                        essayAnswer.querySelectorAll('input,select').forEach(el => el.disabled = false);
                     }
                 }
 
@@ -469,6 +468,8 @@
                                 if (!answerSelect || !answerSelect.value) {
                                     clientErrors.push(`Question #${qIndex + 1} (True/False): Please select a correct answer.`);
                                 }
+                            } else if (currentQType === 'essay') {
+                                
                             }
                         });
                     }

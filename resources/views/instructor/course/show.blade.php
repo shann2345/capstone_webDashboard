@@ -1,4 +1,10 @@
+{{-- resources/views/courses/show.blade.php --}}
+
 <x-layout>
+    <x-slot name="title">
+        {{ $course->title }} - Course Details
+    </x-slot>
+
     <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ $course->title }} ({{ $course->course_code }})</h1>
     <p class="text-gray-600 mb-2">Program: {{ $course->program->name ?? 'N/A' }}</p>
     <p class="text-gray-600 mb-4">Instructor: {{ $course->instructor->name ?? 'N/A' }}</p>
@@ -11,11 +17,17 @@
     @endif
 
     {{-- Global Dropdown Button for Adding Activity/Resource --}}
-    <div class="flex justify-end mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <button
+                type="button"
+                class="inline-flex items-center justify-center rounded-full bg-blue-600 text-white w-8 h-8 text-2xl font-bold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Add Topic"
+                id="add-topic-button"
+            >+</button>
         <div class="relative inline-block text-left">
             <div>
                 <button type="button" class="inline-flex justify-center w-full border-transparent shadow-sm px-4 py-2 text-black font-medium hover:bg-blue-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" id="global-add-menu-button" aria-expanded="true" aria-haspopup="true">
-                    + Add an Activity or Resource
+                    + Activity or Resource
                     <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
@@ -27,179 +39,243 @@
                     <a href="{{ route('materials.create', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
                         <span class="inline-block w-5 mr-2 text-center">&#128193;</span> Material/Resource
                     </a>
-                    <a href="{{ route('assessments.create.quiz', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Quiz/Exam
+                    {{-- Global Assessment creation links (without material_id) --}}
+                    <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'activity']) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Activity
                     </a>
-                    <a href="{{ route('assessments.create.assignment', $course->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Activity/Project
+                    <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'assignment']) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Assignment
+                    </a>
+                    <a href="{{ route('assessments.create.quiz', ['course'=>$course->id, 'type'=>'exam']) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Exam
+                    </a>
+                    <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'project']) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Project
+                    </a>
+                    <a href="{{ route('assessments.create.quiz', ['course'=>$course->id, 'type'=>'quiz']) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                        <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Quiz
                     </a>
                 </div>
             </div>
         </div>
     </div>
-    {{-- End Global Dropdown --}}
-
-    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Course Content</h2>
-
-    {{-- List Existing Materials --}}
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Materials</h2>
-        @if ($course->materials->isEmpty())
-            <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative text-center" role="alert">
-                <span class="block sm:inline">No materials have been uploaded for this course yet.</span>
+    @php
+        // Merge and sort all items by created_at
+        $allItems = collect($course->materials)
+            ->map(function($item) { $item->item_type = 'material'; return $item; })
+            ->merge(
+                $independentAssessments->map(function($item) { $item->item_type = 'assessment'; return $item; })
+            )
+            ->sortBy('created_at')
+            ->groupBy(function($item) {
+                return $item->created_at->format('F d, Y');
+            });
+    @endphp
+    {{-- Topic section --}}
+    @foreach($topics as $topic)
+        <div class="bg-white p-6 shadow_md overflow-visible topic-section mb-8" data-topic-id="{{ $topic->id }}">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2 text-left w-full">
+                    <button type="button"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full border-transparent shadow-sm p-1 text-black font-medium
+                            hover:bg-blue-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+                            edit-topic-button"
+                        data-topic-id="{{ $topic->id }}"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                    </button>
+                    <input
+                        type="text"
+                        value="{{ $topic->name }}"
+                        class="text-center min-w-[70px] w-auto px-2 py-1 disabled:bg-transparent focus:bg-white focus:outline-none transition-all duration-200 topic-name-input"
+                        disabled
+                        data-topic-id="{{ $topic->id }}"
+                    >
+                </div>
+                {{-- Per-topic Add Activity/Resource Dropdown --}}
+                <div class="relative inline-block text-left">
+                    <button type="button"
+                        class="inline-flex justify-center w-56 border-transparent shadow-sm px-4 text-black text-sm font-medium hover:bg-blue-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 topic-add-menu-button"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        data-topic-id="{{ $topic->id }}"
+                    >
+                        + Activity or Resource
+                        <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 topic-add-menu"
+                        role="menu"
+                        aria-orientation="vertical"
+                        tabindex="-1"
+                        data-topic-id="{{ $topic->id }}"
+                    >
+                        <div class="py-1" role="none">
+                            <a href="{{ route('materials.create', ['course' => $course->id, 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128193;</span> Material/Resource
+                            </a>
+                            <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'activity', 'topic_id'=>$topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Activity
+                            </a>
+                            <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'assignment', 'topic_id'=>$topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Assignment
+                            </a>
+                            <a href="{{ route('assessments.create.quiz', ['course'=>$course->id, 'type'=>'exam', 'topic_id'=>$topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Exam
+                            </a>
+                            <a href="{{ route('assessments.create.assignment', ['course'=>$course->id, 'typeAct'=>'project', 'topic_id'=>$topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Project
+                            </a>
+                            <a href="{{ route('assessments.create.quiz', ['course'=>$course->id, 'type'=>'quiz', 'topic_id'=>$topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Quiz
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Availability</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach ($course->materials as $material)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $material->title }}</div>
-                                    @if($material->description)
-                                        <div class="text-sm text-gray-500">{{ Str::limit($material->description, 50) }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                        {{ ucfirst($material->material_type) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    @if($material->available_at || $material->unavailable_at)
-                                        @if($material->isAvailable())
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Available</span>
-                                        @else
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Scheduled</span>
-                                        @endif
-                                        @if($material->available_at)
-                                            <div class="text-xs text-gray-400">From: {{ $material->available_at->format('M d, Y H:i A') }}</div>
-                                        @endif
-                                        @if($material->unavailable_at)
-                                            <div class="text-xs text-gray-400">Until: {{ $material->unavailable_at->format('M d, Y H:i A') }}</div>
-                                        @endif
-                                    @else
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Always Available</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $material->created_at->format('M d, Y') }}
-                                </td>
-                                {{-- Actions Column with new dropdown below existing links --}}
-                                <td class="px-6 py-4 text-right text-sm font-medium">
-                                    <div class="flex justify-end items-center mb-2">
-                                        @if($material->file_path)
-                                            <a href="{{ route('materials.download', $material->id) }}" class="text-blue-600 hover:text-blue-900 mr-4">Download</a>
-                                        @endif
-                                        <a href="#" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
-                                        <form action="#" method="POST" class="inline-block">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </form>
-                                    </div>
-                                    {{-- NEW: Per-Material Add Assessment Dropdown --}}
-                                    <div class="relative inline-block text-left mt-2">
-                                        <div> {{-- This div wraps the button --}}
-                                            <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 material-add-button" data-material-id="{{ $material->id }}" aria-expanded="true" aria-haspopup="true">
-                                                Add Assessment
-                                                <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                                </svg>
-                                            </button>
-                                        </div>
+            {{-- Show materials/assessments for this topic --}}
+            @php
+                $topicItems = collect($course->materials)
+                    ->where('topic_id', $topic->id)
+                    ->map(function($item) { $item->item_type = 'material'; return $item; })
+                    ->merge(
+                        $independentAssessments->where('topic_id', $topic->id)->map(function($item) { $item->item_type = 'assessment'; return $item; })
+                    )
+                    ->sortBy('created_at')
+                    ->groupBy(function($item) {
+                        return $item->created_at->format('F d, Y');
+                    });
+            @endphp
 
-                                        {{-- This is the menu div, sibling to the button's wrapper div --}}
-                                        <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 material-add-menu" role="menu" aria-orientation="vertical" tabindex="-1">
-                                            <div class="py-1" role="none">
-                                                {{-- Pass course_id AND material_id to the create assessment form --}}
-                                                <a href="{{ route('assessments.create.quiz', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Quiz/Exam
-                                                </a>
-                                                <a href="{{ route('assessments.create.assignment', ['course' => $course->id, 'material_id' => $material->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
-                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Add Activity/Project
-                                                </a>
-                                                {{-- Add more assessment types here if needed, linking to createAssessment with this material_id --}}
+            @foreach ($topicItems as $date => $items)
+                <div class="mb-6 ml-8">
+                    <table class="min-w-full divide-y divide-gray-200 mb-4">
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach ($items as $item)
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap align-top">
+                                        <div class="flex flex-col space-y-1">
+                                            {{-- Title --}}
+                                            <div class="text-xl font-medium font-style-bold text-gray-900">{{ $item->title }}</div>
+                                            {{-- Actions --}}
+                                            <div class="mt-2">
+                                                @if($item->item_type === 'material')
+                                                    <div class="gap-2 items-center mb-2">
+                                                        @if($item->file_path)
+                                                            <a href="{{ route('materials.download', $item->id) }}" class="text-blue-600 hover:text-blue-900">Download</a>
+                                                        @endif
+                                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                                    </div>
+                                                    {{-- Add Assessment Dropdown --}}
+                                                    <div class="relative inline-block text-left mt-2">
+                                                        <div>
+                                                            <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 material-add-button" data-material-id="{{ $item->id }}" aria-expanded="true" aria-haspopup="true">
+                                                                Add Assessment
+                                                                <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                        <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 material-add-menu" role="menu" aria-orientation="vertical" tabindex="-1" data-material-id="{{ $item->id }}">
+                                                            <div class="py-1" role="none">
+                                                                <a href="{{ route('assessments.create.assignment', ['course' => $course->id, 'typeAct' => 'activity', 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Activity
+                                                                </a>
+                                                                <a href="{{ route('assessments.create.assignment', ['course' => $course->id, 'typeAct' => 'assignment', 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Assignment
+                                                                </a>
+                                                                <a href="{{ route('assessments.create.quiz', ['course' => $course->id, 'type' => 'exam', 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Exam
+                                                                </a>
+                                                                <a href="{{ route('assessments.create.assignment', ['course' => $course->id, 'typeAct' => 'project', 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Project
+                                                                </a>
+                                                                <a href="{{ route('assessments.create.quiz', ['course' => $course->id, 'type' => 'quiz', 'topic_id' => $topic->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">
+                                                                    <span class="inline-block w-5 mr-2 text-center">&#128220;</span> Quiz
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="flex flex-wrap gap-2 items-center">
+                                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">View/Edit</a>
+                                                        <form action="#" method="POST" class="inline-block">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endforeach
+        </div>
+    @endforeach
 
-    {{-- Section to list standalone Assessments --}}
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Assessments (Independent)</h2>
-        @if ($independentAssessments->isEmpty())
-            <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative text-center" role="alert">
-                <span class="block sm:inline">No independent assessments have been created for this course yet.</span>
-            </div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Associated Material</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach ($independentAssessments as $assessment)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $assessment->title }}</div>
-                                    @if($assessment->description)
-                                        <div class="text-sm text-gray-500">{{ Str::limit($assessment->description, 50) }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                                        {{ ucfirst($assessment->type) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    @if($assessment->material)
-                                        {{-- Link to material's show page if you have one, otherwise just display title --}}
-                                        <a href="#" class="text-blue-600 hover:text-blue-900">{{ $assessment->material->title }}</a>
-                                    @else
-                                        N/A (Independent)
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $assessment->created_at->format('M d, Y') }}
-                                </td>
-                                <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium">
-                                    <a href="#" class="text-indigo-600 hover:text-indigo-900 mr-4">View/Edit</a>
-                                    <form action="#" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </div>
+    {{-- Optionally, show materials/assessments with no topic --}}
+    @php
+        $untopicedItems = collect($course->materials)
+            ->whereNull('topic_id')
+            ->map(function($item) { $item->item_type = 'material'; return $item; })
+            ->merge(
+                $independentAssessments->whereNull('topic_id')->map(function($item) { $item->item_type = 'assessment'; return $item; })
+            )
+            ->sortBy('created_at')
+            ->groupBy(function($item) {
+                return $item->created_at->format('F d, Y');
+            });
+    @endphp
+
+    @if($untopicedItems->count())
+        <div class="bg-white p-6 shadow_md overflow-visible topic-section mb-8" data-topic-id="none">
+            @foreach ($untopicedItems as $date => $items)
+                <div class="mb-6 ml-8">
+                    <table class="min-w-full divide-y divide-gray-200 mb-4">
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach ($items as $item)
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap align-top">
+                                        <div class="flex flex-col space-y-1">
+                                            <div class="text-xl font-medium font-style-bold text-gray-900">{{ $item->title }}</div>
+                                            {{-- Actions --}}
+                                            <div class="mt-2">
+                                                @if($item->item_type === 'material')
+                                                    <div class="gap-2 items-center mb-2">
+                                                        @if($item->file_path)
+                                                            <a href="{{ route('materials.download', $item->id) }}" class="text-blue-600 hover:text-blue-900">Download</a>
+                                                        @endif
+                                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                                    </div>
+                                                @else
+                                                    <div class="flex flex-wrap gap-2 items-center">
+                                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">View/Edit</a>
+                                                        <form action="#" method="POST" class="inline-block">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endforeach
+        </div>
+    @endif
 
 
     <div class="flex justify-end mt-6">
@@ -208,6 +284,19 @@
         </a>
     </div>
 
+    {{-- Add Topic Modal --}}
+    <div id="add-topic-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50 hidden">
+        <div class="bg-white p-6 rounded shadow-md w-80">
+            <h2 class="text-lg font-bold mb-2">Add Topic</h2>
+            <input type="text" id="new-topic-name" class="border rounded w-full px-2 py-1 mb-4" placeholder="Topic name">
+            <div class="flex justify-end gap-2">
+                <button id="cancel-add-topic" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
+                <button id="submit-add-topic" class="px-3 py-1 bg-blue-600 text-white rounded">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <x-slot name="scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // --- Global "Add Activity/Resource" Dropdown ---
@@ -216,30 +305,162 @@
 
             if (globalMenuButton && globalAddMenu) {
                 globalMenuButton.addEventListener('click', function(event) {
-                    event.stopPropagation(); // Prevents this click from closing other dropdowns or the window listener
+                    event.stopPropagation();
                     globalAddMenu.classList.toggle('hidden');
                 });
             }
+
+            // --- Edit Topic Button and Input (Corrected) ---
+            document.querySelectorAll('.edit-topic-button').forEach(button => {
+                button.addEventListener('click', function(event) {
+                    const topicId = this.getAttribute('data-topic-id');
+                    const topicNameInput = document.querySelector(`.topic-name-input[data-topic-id="${topicId}"]`);
+
+                    if (topicNameInput) {
+                        topicNameInput.disabled = false;
+                        topicNameInput.focus();
+                        topicNameInput.select(); // Select the text for easier editing
+                    }
+                });
+            });
+
+            document.querySelectorAll('.topic-name-input').forEach(input => {
+                input.addEventListener('blur', function(event) {
+                    const updatedTopicName = this.value.trim();
+                    const topicId = this.getAttribute('data-topic-id');
+
+                    // Only send request if the name has actually changed
+                    if (updatedTopicName && this.defaultValue !== updatedTopicName) {
+                        fetch(`/topics/${topicId}`, { // Use dynamic topicId in the URL
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ name: updatedTopicName })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Topic updated:', data);
+                            // Set defaultValue to the new value so subsequent blur events only fire on actual changes
+                            this.defaultValue = updatedTopicName;
+                        })
+                        .catch(error => {
+                            console.error('Error updating topic:', error);
+                            alert('Error updating topic: ' + error.message);
+                            // Revert to original value if update fails
+                            this.value = this.defaultValue;
+                        })
+                        .finally(() => {
+                            // Always disable the input after blur, regardless of success/failure
+                            this.disabled = true;
+                        });
+                    } else {
+                        // If no change or empty, just disable
+                        this.disabled = true;
+                    }
+                });
+
+                // Also, disable on 'keydown' if 'Enter' is pressed
+                input.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault(); // Prevent new line in input
+                        this.blur(); // Trigger blur to save changes
+                    }
+                });
+            });
 
             // --- Per-Material "Add Assessment" Dropdowns ---
             const materialAddButtons = document.querySelectorAll('.material-add-button');
             materialAddButtons.forEach(button => {
                 button.addEventListener('click', function(event) {
-                    event.stopPropagation(); // Prevent document click from immediately closing
-
-                    // CRITICAL CHANGE: Get the menu element correctly based on your HTML structure.
-                    // The button is inside a div, and the menu is a sibling of that div.
-                    const menu = this.parentElement.nextElementSibling; // Get parent div of button, then its next sibling
-
-                    // Close any other open material menus
+                    event.stopPropagation();
+                    const menu = this.parentElement.nextElementSibling;
                     document.querySelectorAll('.material-add-menu').forEach(openMenu => {
-                        if (openMenu !== menu) { // Only hide if it's a different menu
+                        if (openMenu !== menu) {
                             openMenu.classList.add('hidden');
                         }
                     });
-                    menu.classList.toggle('hidden'); // Toggle the clicked menu
+                    menu.classList.toggle('hidden');
                 });
             });
+
+            // --- Per-topic "Add Activity/Resource" Dropdowns (corrected to use forEach) ---
+            document.querySelectorAll('.topic-add-menu-button').forEach(button => {
+                button.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    const topicId = this.getAttribute('data-topic-id');
+                    const menu = document.querySelector(`.topic-add-menu[data-topic-id="${topicId}"]`);
+
+                    // Close other topic menus
+                    document.querySelectorAll('.topic-add-menu').forEach(openMenu => {
+                        if (openMenu !== menu) {
+                            openMenu.classList.add('hidden');
+                        }
+                    });
+
+                    if (menu) {
+                        menu.classList.toggle('hidden');
+                    }
+                });
+            });
+
+            // --- Add Topic Modal Logic ---
+            const addTopicButton = document.getElementById('add-topic-button');
+            const addTopicModal = document.getElementById('add-topic-modal');
+            const cancelAddTopic = document.getElementById('cancel-add-topic');
+            const submitAddTopic = document.getElementById('submit-add-topic');
+            const newTopicName = document.getElementById('new-topic-name');
+            const courseId = {{ $course->id }};
+
+            if (addTopicButton && addTopicModal) {
+                addTopicButton.addEventListener('click', function() {
+                    addTopicModal.classList.remove('hidden');
+                    newTopicName.value = '';
+                    newTopicName.focus();
+                });
+            }
+            if (cancelAddTopic) {
+                cancelAddTopic.addEventListener('click', function() {
+                    addTopicModal.classList.add('hidden');
+                });
+            }
+            if (submitAddTopic) {
+                submitAddTopic.addEventListener('click', function() {
+                    const name = newTopicName.value.trim();
+                    if (!name) {
+                        alert('Please enter a topic name.');
+                        return;
+                    }
+                    fetch('{{ route('topics.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ name: name, course_id: courseId })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('New topic added:', data);
+                        location.reload(); // Simplest: reload to show new topic
+                    })
+                    .catch(error => {
+                        console.error('Error adding topic:', error);
+                        alert('Error adding topic: ' + error.message);
+                    });
+                });
+            }
 
             // Close all dropdowns if the user clicks outside of any dropdown button or menu
             window.addEventListener('click', function(event) {
@@ -250,17 +471,21 @@
 
                 // Close all material menus
                 document.querySelectorAll('.material-add-menu').forEach(menu => {
-                    // The menu's parent is the 'relative inline-block' div.
-                    // The button's parent is the 'div' inside that 'relative inline-block' div.
-                    // We need to check if the click target is within the button's direct parent, or the menu itself.
-                    const menuContainer = menu.parentElement;
-                    const buttonWrapper = menuContainer ? menuContainer.querySelector('.material-add-button').parentElement : null; // Get the div wrapping the button
+                    const menuButton = menu.previousElementSibling.querySelector('.material-add-button'); // Find the button associated
+                    if (menuButton && !menuButton.contains(event.target) && !menu.contains(event.target)) {
+                        menu.classList.add('hidden');
+                    }
+                });
 
-                    if (buttonWrapper && !buttonWrapper.contains(event.target) && !menu.contains(event.target)) {
+                // Close all topic add menus
+                document.querySelectorAll('.topic-add-menu').forEach(menu => {
+                    const menuButton = menu.previousElementSibling; // The button is the previous sibling
+                    if (menuButton && !menuButton.contains(event.target) && !menu.contains(event.target)) {
                         menu.classList.add('hidden');
                     }
                 });
             });
         });
     </script>
+</x-slot>
 </x-layout>

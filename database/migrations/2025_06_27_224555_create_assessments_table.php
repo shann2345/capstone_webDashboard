@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('assessments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')->constrained()->onDelete('cascade');
-            $table->foreignId('material_id')->nullable()->constrained()->onDelete('set null'); // Link to materials, nullable
+            $table->foreignId('topic_id')->nullable();
             $table->string('title');
-            $table->enum('type', ['quiz', 'exam', 'assignment', 'activity', 'other']);
+            $table->enum('type', ['quiz', 'exam', 'assignment', 'activity', 'project', 'other']);
             $table->text('description')->nullable();
             $table->string('assessment_file_path')->nullable(); // For uploaded files
             $table->integer('duration_minutes')->nullable(); // For quizzes/exams

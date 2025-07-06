@@ -59,22 +59,12 @@ class CourseController extends Controller
     }
     public function show(Course $course)
     {
-        // Eager load materials and assessments for the course.
-        // Also eager load the 'material' relationship on assessments themselves
-        // so we can display the associated material title in the view.
-        $course->load(['materials', 'assessments.material']);
+        // Eager load topics with their materials and assessments
+        $topics = \App\Models\Topic::with(['materials', 'assessments'])->get();
+        $independentAssessments = \App\Models\Assessment::where('course_id', $course->id)
+        ->whereNull('topic_id')
+        ->get();
 
-        // Filter assessments into independent (material_id is null)
-        // and linked (material_id is not null).
-        $independentAssessments = $course->assessments->filter(function ($assessment) {
-            return $assessment->material_id === null;
-        });
-
-        // The linked assessments are still attached to their respective Material models.
-        // We don't necessarily need to pass them as a separate variable if they are
-        // always displayed implicitly through the material relationship on the assessment.
-        // However, if you wanted a separate list of ALL assessments, you'd just pass $course->assessments.
-
-        return view('instructor.course.show', compact('course', 'independentAssessments'));
+        return view('instructor.course.show', compact('course', 'topics', 'independentAssessments'));
     }
 }

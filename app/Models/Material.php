@@ -43,10 +43,9 @@ class Material extends Model
     {
         return $this->belongsTo(Course::class);
     }
-    public function assessments() {
-        return $this->hasMany(Assessment::class);
+    public function topic() {
+        return $this->belongsTo(Topic::class);
     }
-
     /**
      * Helper to check if the material is currently available.
      */

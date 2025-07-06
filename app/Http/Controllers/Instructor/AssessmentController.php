@@ -7,6 +7,7 @@ use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\Question;
 use App\Models\QuestionOption;
+use App\Models\Topic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,12 +25,11 @@ class AssessmentController extends Controller
      * @param  \App\Models\Course  $course
      * @return \Illuminate\View\View
      */
-    public function createQuiz(Course $course)
+    public function createQuiz(Course $course, $type, Request $request)
     {
-        $course->load('materials'); // Eager load materials for dropdown
-        // Pass a default type to the view for consistency
-        $assessmentType = 'quiz';
-        return view('instructor.assessment.createQuiz', compact('course', 'assessmentType'));
+        $assessmentType = $type;
+        $topicId = $request->query('topic_id');
+        return view('instructor.assessment.createQuiz', compact('course', 'assessmentType', 'topicId'));
     }
     public function storeQuiz(Request $request, $courseId)
     {
@@ -37,16 +37,16 @@ class AssessmentController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'material_id' => 'nullable|exists:materials,id',
             'duration_minutes' => 'nullable|integer|min:0',
             'access_code' => 'nullable|string|max:255',
             'assessment_file' => 'nullable|file|max:20480', // 20MB
             'available_at' => 'nullable|date',
             'unavailable_at' => 'nullable|date|after_or_equal:available_at',
             'questions' => 'nullable|array',
-            'questions.*.question_type' => 'required_with:questions|string|in:multiple_choice,identification,true_false',
+            'questions.*.question_type' => 'required_with:questions|string|in:multiple_choice,identification,true_false,essay',
             'questions.*.question_text' => 'required_with:questions|string',
             'questions.*.points' => 'required_with:questions|integer|min:1',
+            'topic_id' => 'nullable|exists:topics,id', 
         ]);
 
         // Handle file upload if present
@@ -58,7 +58,7 @@ class AssessmentController extends Controller
         // Create the assessment
         $assessment = \App\Models\Assessment::create([
             'course_id' => $courseId,
-            'material_id' => $validated['material_id'] ?? null,
+            'topic_id' => $validated['topic_id'] ?? null,
             'title' => $validated['title'],
             'type' => $request->input('type', 'quiz'),
             'description' => $validated['description'] ?? null,
@@ -83,7 +83,6 @@ class AssessmentController extends Controller
 
                 // Handle correct_answer and options
                 if ($q['question_type'] === 'multiple_choice') {
-                    // Save correct answer as the selected option index
                     $question->correct_answer = $q['correct_answer'];
                     $question->save();
 
@@ -121,11 +120,9 @@ class AssessmentController extends Controller
      * @param  \App\Models\Course  $course
      * @return \Illuminate\View\View
      */
-    public function createAssignment(Course $course)
+    public function createAssignment(Course $course, $typeAct)
     {
-        $course->load('materials');
-        // Pass a default type to the view for consistency
-        $assessmentType = 'assignment'; // Or 'activity'
+        $assessmentType = $typeAct; 
         return view('instructor.assessment.createAssignment', compact('course', 'assessmentType'));
     }
 
@@ -140,7 +137,7 @@ class AssessmentController extends Controller
     {
         try {
             $validatedAssessmentData = $request->validate([
-                'material_id' => 'nullable|exists:materials,id',
+                'topic_id' => 'nullable|exists:topics,id',
                 'title' => 'required|string|max:255',
                 'type' => ['required', Rule::in(['assignment', 'activity'])], // Only allow assignment/activity here
                 'description' => 'nullable|string',
@@ -166,7 +163,7 @@ class AssessmentController extends Controller
 
             $assessment = Assessment::create([
                 'course_id' => $course->id,
-                'material_id' => $validatedAssessmentData['material_id'] ?? null,
+                'topic_id' => $validatedAssessmentData['topic_id'] ?? null,
                 'title' => $validatedAssessmentData['title'],
                 'type' => $validatedAssessmentData['type'],
                 'description' => $validatedAssessmentData['description'] ?? null,

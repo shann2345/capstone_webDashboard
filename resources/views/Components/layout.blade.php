@@ -33,7 +33,7 @@
         .main-content { @apply container mx-auto px-4 py-6; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-300 min-h-screen flex flex-col">
     <!-- Header Section -->
     <header class="flex justify-between items-center px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
         <!-- System Name on the Left -->

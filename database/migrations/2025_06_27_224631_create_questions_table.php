@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('assessment_id')->constrained()->onDelete('cascade');
             $table->text('question_text'); // The actual question content
-            $table->enum('question_type', ['multiple_choice', 'identification', 'true_false']); // Type of question
+            $table->enum('question_type', ['multiple_choice', 'identification', 'true_false', 'essay']); // Type of question
             $table->integer('points')->default(1); // Points for the question
             $table->text('correct_answer')->nullable(); // Stores the correct answer (index for MC, text for ID, 'true'/'false' for TF)
             $table->integer('order')->nullable(); // Display order within the assessment

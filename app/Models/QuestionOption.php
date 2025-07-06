@@ -29,10 +29,6 @@ class QuestionOption extends Model
     protected $casts = [
         'option_order' => 'integer',
     ];
-
-    /**
-     * Get the question that the option belongs to.
-     */
     public function question()
     {
         return $this->belongsTo(Question::class);

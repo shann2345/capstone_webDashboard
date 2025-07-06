@@ -33,18 +33,10 @@ class Question extends Model
         'points' => 'integer',
         'order' => 'integer',
     ];
-
-    /**
-     * Get the assessment that owns the question.
-     */
     public function assessment()
     {
         return $this->belongsTo(Assessment::class);
     }
-
-    /**
-     * Get the options for the question (if it's multiple choice).
-     */
     public function options()
     {
         return $this->hasMany(QuestionOption::class)->orderBy('option_order');

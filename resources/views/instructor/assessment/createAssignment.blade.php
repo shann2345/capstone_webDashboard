@@ -47,23 +47,6 @@
                             </div>
                         @endif
 
-                        <!-- Associated Material -->
-                        <div class="mb-4">
-                            <label for="material_id" class="block text-gray-700 text-sm font-bold mb-2">Associated Material (Optional)</label>
-                            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('material_id') border-red-500 @enderror" id="material_id" name="material_id">
-                                <option value="">No associated material</option>
-                                @foreach($course->materials as $material)
-                                    <option value="{{ $material->id }}"
-                                            {{ (old('material_id') == $material->id) ? 'selected' : '' }}>
-                                        {{ $material->title }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('material_id')
-                                <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
-                            @enderror
-                        </div>
-
                         <!-- Basic Assessment Information -->
                         <div class="mb-4">
                             <label for="title" class="block text-gray-700 text-sm font-bold mb-2">{{ ucfirst($assessmentType) }} Title <span class="text-red-500">*</span></label>

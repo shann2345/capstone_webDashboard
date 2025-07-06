@@ -17,10 +17,8 @@ return new class extends Migration
             $table->id();
 
             // Link to the course it belongs to
-            $table->foreignId('course_id')
-                  ->constrained('courses') // References the 'id' in the 'courses' table
-                  ->onDelete('cascade');  // If a course is deleted, its materials are also deleted
-
+            $table->foreignId('course_id')->constrained('courses') ->onDelete('cascade');  
+            $table->foreignId('topic_id')->nullable()->constrained('topics')->onDelete('set null');
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('file_path')->nullable(); // Path to the uploaded file, nullable if it's just text/link

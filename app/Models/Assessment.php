@@ -17,7 +17,6 @@ class Assessment extends Model
      */
     protected $fillable = [
         'course_id',
-        'material_id',
         'title',
         'type',
         'description',
@@ -38,37 +37,21 @@ class Assessment extends Model
         'available_at' => 'datetime',
         'unavailable_at' => 'datetime',
     ];
-
-    /**
-     * Get the course that owns the assessment.
-     */
     public function course()
     {
         return $this->belongsTo(Course::class);
     }
-
-    /**
-     * Get the material that the assessment is associated with.
-     */
-    public function material()
-    {
-        return $this->belongsTo(Material::class); // Assuming you have a Material model
-    }
-
-    /**
-     * Get the user (instructor) who created the assessment.
-     */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by'); // Assuming your User model is for instructors
+        return $this->belongsTo(User::class, 'created_by'); 
     }
-
-    /**
-     * Get the questions for the assessment.
-     */
     public function questions()
     {
         return $this->hasMany(Question::class)->orderBy('order');
+    }
+    public function topic() 
+    {
+        return $this->belongsTo(Topic::class);
     }
 }
 

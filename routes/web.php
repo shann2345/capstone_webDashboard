@@ -7,6 +7,7 @@ use App\Http\Controllers\Instructor\InstructorController;
 use App\Http\Controllers\Instructor\CourseController;
 use App\Http\Controllers\Instructor\MaterialController;
 use App\Http\Controllers\Instructor\AssessmentController;
+use App\Http\Controllers\Instructor\TopicController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -76,15 +77,17 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::post('/course/createCourse', [CourseController::class, 'store'])->name('course.store');
     Route::get('/course/{course}', [CourseController::class, 'show'])->name('courses.show');
 
+    Route::post('/topics', [TopicController::class, 'store'])->name('topics.store');
+    Route::patch('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
+
     Route::get('/course/{course}/materials', [MaterialController::class, 'create'])->name('materials.create');
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    Route::get('/courses/{course}/assessments/create/quiz', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
+    Route::get('/courses/{course}/assessments/withQ/{type}', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
     Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');
 
-    Route::get('/courses/{course}/assessments/create/assignment', [AssessmentController::class, 'createAssignment'])->name('assessments.create.assignment');
+    Route::get('/courses/{course}/assessments/withOutQ/{typeAct}', [AssessmentController::class, 'createAssignment'])->name('assessments.create.assignment');
     Route::post('/courses/{course}/assessments/store/assignment', [AssessmentController::class, 'storeAssignment'])->name('assessments.store.assignment');
-    
 
 });
