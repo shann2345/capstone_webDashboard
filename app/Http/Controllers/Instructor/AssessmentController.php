@@ -113,33 +113,22 @@ class AssessmentController extends Controller
         return response()->json(['success' => true, 'redirect' => route('courses.show', $courseId)]);
     }
 
-    /**
-     * Show the form for creating a new Assignment or Activity assessment.
-     * This form is simpler, focusing on description and file upload.
-     *
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\View\View
-     */
-    public function createAssignment(Course $course, $typeAct)
+    public function createAssignment(Course $course, $typeAct, Request $request)
     {
         $assessmentType = $typeAct; 
-        return view('instructor.assessment.createAssignment', compact('course', 'assessmentType'));
+        $topicId = $request->query('topic_id');
+        return view('instructor.assessment.createAssignment', compact('course', 'assessmentType', 'topicId'));
     }
 
-    /**
-     * Store a newly created Assignment or Activity assessment.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\Http\JsonResponse
-     */
+
     public function storeAssignment(Request $request, Course $course)
     {
+        Log::info($request->all());
         try {
             $validatedAssessmentData = $request->validate([
                 'topic_id' => 'nullable|exists:topics,id',
                 'title' => 'required|string|max:255',
-                'type' => ['required', Rule::in(['assignment', 'activity'])], // Only allow assignment/activity here
+                'type' => ['required', Rule::in(['assignment', 'activity', 'project'])], // Only allow assignment/activity here
                 'description' => 'nullable|string',
                 'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:20480', // 20MB
                 'available_at' => 'nullable|date',

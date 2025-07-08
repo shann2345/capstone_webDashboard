@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('assessments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('course_id')->constrained()->onDelete('cascade');
-            $table->foreignId('topic_id')->nullable();
+            $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
+            $table->foreignId('topic_id')->nullable()->constrained('topics')->onDelete('set null');
             $table->string('title');
             $table->enum('type', ['quiz', 'exam', 'assignment', 'activity', 'project', 'other']);
             $table->text('description')->nullable();

@@ -83,6 +83,7 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::get('/course/{course}/materials', [MaterialController::class, 'create'])->name('materials.create');
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
+    Route::get('/materials/{material}', [MaterialController::class, 'show'])->name('materials.show');
 
     Route::get('/courses/{course}/assessments/withQ/{type}', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
     Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');

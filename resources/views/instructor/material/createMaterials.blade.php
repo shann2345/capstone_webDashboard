@@ -1,5 +1,3 @@
-{{-- resources/views/materials/index.blade.php --}}
-
 <x-layout>
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Manage Materials for: <span class="text-blue-700">{{ $course->title }}</span></h1>
     <p class="text-gray-600 mb-8">Course Code: {{ $course->course_code }}</p>
@@ -37,6 +35,8 @@
         <form action="{{ route('materials.store', $course->id) }}" method="POST" enctype="multipart/form-data" id="uploadMaterialForm">
             @csrf
 
+            <input type="hidden" name="topic_id" value="{{ $topicId }}">
+
             <div class="mb-4">
                 <label for="material_title" class="block text-gray-700 text-sm font-bold mb-2">Material Title:</label>
                 <input type="text" id="material_title" name="title" value="{{ old('title') }}"
@@ -52,8 +52,14 @@
             <div class="mb-4">
                 <label for="material_file" class="block text-gray-700 text-sm font-bold mb-2">Upload File:</label>
                 <input type="file" id="material_file" name="material_file"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
-                <p class="mt-1 text-sm text-gray-500">PDF, Word, PPT, TXT, Java, JS, Python, MP4, MOV, AVI (Max 20MB)</p>
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required
+                       accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.java,.js,.py,.php,.html,.css,.json,.xml,.mp4,.mov,.avi,.webm,.ogg,.mp3,.wav,.aac,.flac,.jpg,.jpeg,.png,.gif,.svg,.webp,.zip,.rar,.7z,.tar,.gz"> {{-- UPDATED: Added accept attribute --}}
+                <p class="mt-1 text-sm text-gray-500">
+                    {{-- UPDATED: Informational text --}}
+                    Supported files:<br> Documents (PDF, Word, PPT, TXT)<br> Code (Java, JS, Python, PHP, HTML, CSS, JSON, XML)<br>
+                    Videos (MP4, MOV, AVI, WebM, Ogg)<br> Audio (MP3, WAV, Ogg, AAC, FLAC) <br>Images (JPG, PNG, GIF, SVG, WebP)<br>
+                    Archives (ZIP, RAR, 7Z, TAR, GZ). Max 20MB.
+                </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -79,7 +85,7 @@
         </form>
     </div>
 
-    {{-- List Existing Materials --}}
+    {{-- The commented out "List Existing Materials" section remains commented as per your previous input --}}
     {{-- <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Materials</h2>
         @if ($materials->isEmpty())
@@ -133,10 +139,10 @@
                                     {{ $material->created_at->format('M d, Y') }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    @if($material->file_path) 
+                                    @if($material->file_path)
                                         <a href="{{ route('materials.download', $material->id) }}" class="text-blue-600 hover:text-blue-900 mr-4">Download</a>
                                     @endif
-                                    
+
                                     <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
                                     <a href="#" class="text-red-600 hover:text-red-900 ml-4">Delete</a>
                                 </td>
@@ -217,19 +223,11 @@
                         if (response.message) {
                             errorMessage = response.message;
                         }
-                        // If validation errors, Laravel usually redirects and flashes them.
-                        // For API style, you'd show errors here. For now, a simple redirect on fail
-                        // will show validation errors (if server redirects back).
                     } catch (e) {
                         console.error('Error parsing response:', e);
                     }
-                    // Since Laravel validation redirects, for XHR success means redirect.
-                    // For XHR errors, we generally wouldn't get a redirect, so a simple alert for now.
-                    // In a full SPA, you'd parse errors and display them without page reload.
                     alert(errorMessage + ' Please check your input and try again.');
 
-                    // Optionally, redirect to allow Laravel's validation errors to be displayed
-                    // if the server actually returned a redirect with errors (which it would for validation failure)
                     if (xhr.status === 422 || xhr.status === 302) { // 422 for validation, 302 for redirect
                         window.location.href = xhr.responseURL || window.location.href;
                     }

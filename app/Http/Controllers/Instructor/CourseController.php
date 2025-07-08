@@ -6,11 +6,13 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Models\Course;
 use App\Http\Controllers\Controller;
-use App\Models\Material;
-use App\Models\Program; // Still need to import Department model!
+use App\Models\Material; // Keep if still used elsewhere in the controller
+use App\Models\Program;
+use App\Models\Topic; // Make sure this is imported
+use App\Models\Assessment; // Make sure this is imported
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str; // Import Str facade for string manipulation (optional but good practice)
+use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
@@ -57,13 +59,21 @@ class CourseController extends Controller
         // 4. Redirect back with a success message
         return redirect()->route('instructor.dashboard')->with('success', 'Course created successfully!');
     }
+
     public function show(Course $course)
     {
-        // Eager load topics with their materials and assessments
-        $topics = \App\Models\Topic::with(['materials', 'assessments'])->get();
-        $independentAssessments = \App\Models\Assessment::where('course_id', $course->id)
-        ->whereNull('topic_id')
-        ->get();
+        // Eager load program and instructor for the course
+        $course->load(['program', 'instructor']);
+
+        // --- CORRECTED LINE HERE ---
+        // Fetch only topics associated with THIS specific course,
+        // and eager load their materials and assessments.
+        $topics = $course->topics()->with(['materials', 'assessments'])->get();
+
+        // Fetch independent assessments for this course (those not linked to any topic)
+        $independentAssessments = $course->assessments()
+                                        ->whereNull('topic_id')
+                                        ->get();
 
         return view('instructor.course.show', compact('course', 'topics', 'independentAssessments'));
     }

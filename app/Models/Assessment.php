@@ -17,6 +17,7 @@ class Assessment extends Model
      */
     protected $fillable = [
         'course_id',
+        'topic_id',
         'title',
         'type',
         'description',

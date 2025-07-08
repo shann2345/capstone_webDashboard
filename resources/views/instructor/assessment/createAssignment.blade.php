@@ -26,8 +26,8 @@
                     <form method="POST" action="{{ route('assessments.store.assignment', $course->id) }}" enctype="multipart/form-data" id="createAssessmentForm">
                         @csrf
 
-                        {{-- Hidden input for assessment type --}}
                         <input type="hidden" name="type" value="{{ $assessmentType }}">
+                        <input type="hidden" name="topic_id" value="{{ $topicId }}">
 
                         {{-- Display Validation Errors --}}
                         <div id="form-errors" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">

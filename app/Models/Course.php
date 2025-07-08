@@ -33,10 +33,10 @@ class Course extends Model
         return $this->belongsTo(Program::class); // A Course belongs to one Department
     }
 
-    /**
-     * Get the instructor (User) that teaches the Course.
-     * This defines a Many-to-One relationship.
-     */
+    public function topics()
+    {
+        return $this->hasMany(Topic::class);
+    }
     public function instructor()
     {
         // A Course belongs to one Instructor (who is a User model).
