@@ -46,7 +46,7 @@ class AssessmentController extends Controller
             'questions.*.question_type' => 'required_with:questions|string|in:multiple_choice,identification,true_false,essay',
             'questions.*.question_text' => 'required_with:questions|string',
             'questions.*.points' => 'required_with:questions|integer|min:1',
-            'topic_id' => 'nullable|exists:topics,id', 
+            'topic_id' => 'nullable|exists:topics,id',
         ]);
 
         // Handle file upload if present
@@ -113,9 +113,171 @@ class AssessmentController extends Controller
         return response()->json(['success' => true, 'redirect' => route('courses.show', $courseId)]);
     }
 
+    public function editQuiz(Course $course, Assessment $assessment)
+    {
+        // Ensure the assessment belongs to the course
+        if ($assessment->course_id !== $course->id) {
+            abort(404);
+        }
+        // Load questions and their options
+        $assessment->load('questions.options');
+
+        $assessmentType = $assessment->type; // 'quiz' or 'exam'
+        $topicId = $assessment->topic_id; // Get topic_id if associated
+
+        return view('instructor.assessment.createQuiz', compact('course', 'assessmentType', 'topicId', 'assessment'));
+    }
+
+    // Method to handle the update submission
+    public function updateQuiz(Request $request, Course $course, Assessment $assessment)
+    {
+        // 1. (Optional but recommended) Ownership check - Already good
+        if ($assessment->course_id !== $course->id) {
+            Log::warning("Mismatched course_id for assessment during update. Course ID in URL: {$course->id}, Assessment course_id: {$assessment->course_id}, Assessment ID: {$assessment->id}");
+            abort(403, 'Unauthorized action.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 2. Validate the request data
+            $validatedData = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'duration_minutes' => 'nullable|integer|min:0',
+                'access_code' => 'nullable|string|max:255',
+                'available_at' => 'nullable|date',
+                'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+                'questions' => 'nullable|array',
+                'questions.*.id' => 'nullable|exists:questions,id', // For existing questions
+                'questions.*.question_text' => 'required|string',
+                'questions.*.question_type' => ['required', Rule::in(['multiple_choice', 'identification', 'true_false', 'essay'])],
+                // Corrected: correct_answer is required for MC too (it will be the index)
+                'questions.*.correct_answer' => 'required_if:questions.*.question_type,identification,true_false,multiple_choice|nullable|string',
+                'questions.*.points' => 'required|integer|min:1', // Added points validation
+                // 'questions.*.order' => 'required|integer', // REMOVED: Order is implicitly handled by array index
+                'questions.*.options' => 'array', // For multiple choice options
+                'questions.*.options.*.id' => 'nullable|exists:question_options,id',
+                'questions.*.options.*.option_text' => 'required|string',
+                // 'deleted_questions' and 'deleted_options' are no longer strictly needed in this flow
+                // as we handle deletion by checking what's NOT in the submitted data.
+            ]);
+
+            // 3. Handle file upload if present (similar to store method)
+            $filePath = $assessment->assessment_file_path; // Keep existing path by default
+
+            // Check if a new file is uploaded
+            if ($request->hasFile('assessment_file')) {
+                // Delete old file if exists
+                if ($filePath) {
+                    Storage::disk('public')->delete($filePath);
+                }
+                $filePath = $request->file('assessment_file')->store('assessments', 'public');
+            } elseif ($request->has('clear_assessment_file') && $request->input('clear_assessment_file') == '1') {
+                // If "remove current file" checkbox is checked
+                if ($filePath) {
+                    Storage::disk('public')->delete($filePath);
+                }
+                $filePath = null;
+            }
+
+
+            // 4. Update assessment details
+            $assessment->fill([
+                'title' => $validatedData['title'],
+                'description' => $validatedData['description'] ?? null,
+                'assessment_file_path' => $filePath, // Update file path
+                'duration_minutes' => $validatedData['duration_minutes'] ?? null,
+                'access_code' => $validatedData['access_code'] ?? null,
+                'available_at' => $validatedData['available_at'] ?? null,
+                'unavailable_at' => $validatedData['unavailable_at'] ?? null,
+            ])->save();
+
+
+            // 5. Handle question and option updates (synchronize based on submitted data)
+            $submittedQuestionIds = collect($validatedData['questions'])->pluck('id')->filter()->toArray();
+
+            // Delete questions that are no longer in the submitted data
+            $assessment->questions()->whereNotIn('id', $submittedQuestionIds)->delete();
+
+            foreach ($validatedData['questions'] as $order => $questionData) { // $order here is the array index from the frontend
+                $question = $assessment->questions()->updateOrCreate(
+                    ['id' => $questionData['id'] ?? null], // Match by ID for existing, create new if null
+                    [
+                        'question_text' => $questionData['question_text'],
+                        'question_type' => $questionData['question_type'],
+                        'points' => $questionData['points'], // Ensure points are saved/updated
+                        'order' => $order, // Use loop index for order
+                        'correct_answer' => $questionData['correct_answer'] ?? null,
+                    ]
+                );
+
+                // Handle options for multiple_choice questions
+                if ($questionData['question_type'] === 'multiple_choice' && isset($questionData['options'])) {
+                    $submittedOptionIds = collect($questionData['options'])->pluck('id')->filter()->toArray();
+
+                    // Delete options for this question that are no longer in the submitted data
+                    $question->options()->whereNotIn('id', $submittedOptionIds)->delete();
+
+                    foreach ($questionData['options'] as $optionOrder => $optionData) {
+                        $question->options()->updateOrCreate(
+                            ['id' => $optionData['id'] ?? null], // Match by ID for existing, create new if null
+                            [
+                                'option_text' => $optionData['option_text'],
+                                'option_order' => $optionOrder, // Use loop index for order
+                            ]
+                        );
+                    }
+                } else {
+                    // If question type changes from multiple_choice, delete all its options
+                    $question->options()->delete();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json(['success' => true, 'redirect' => route('courses.show', $course->id)]);
+
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Quiz update failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            // Check if a file was uploaded and delete it if the transaction fails
+            if ($request->hasFile('assessment_file') && isset($filePath) && Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
+            }
+            return response()->json(['error' => 'Failed to update quiz: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function showQuiz(Course $course, Assessment $assessment)
+    {
+        // Important: While you confirmed IDs match, this check is good practice for security and robustness.
+        // It ensures the assessment truly belongs to the course passed in the URL.
+        if ($assessment->course_id !== $course->id) {
+            // Log the discrepancy for debugging purposes
+            Log::warning("Mismatched course_id for assessment. Course ID in URL: {$course->id}, Assessment course_id: {$assessment->course_id}, Assessment ID: {$assessment->id}");
+            abort(404, 'Quiz not found in this course.'); // Or return redirect()->back()->withErrors(...)
+        }
+
+        // Load any necessary relationships for displaying the quiz, e.g., its questions and options.
+        // 'questions.options' will load questions, and for each question, its options.
+        $assessment->load('questions.options');
+
+        // Return the view for displaying the quiz details, passing the course and assessment data.
+        // Ensure you have a 'showQuiz.blade.php' file in resources/views/instructor/assessment/
+        return view('instructor.assessment.showQuiz', compact('course', 'assessment'));
+    }
+
+
     public function createAssignment(Course $course, $typeAct, Request $request)
     {
-        $assessmentType = $typeAct; 
+        $assessmentType = $typeAct;
         $topicId = $request->query('topic_id');
         return view('instructor.assessment.createAssignment', compact('course', 'assessmentType', 'topicId'));
     }
@@ -132,7 +294,7 @@ class AssessmentController extends Controller
                 'description' => 'nullable|string',
                 'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:20480', // 20MB
                 'available_at' => 'nullable|date',
-                'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+                'unavailable_at' => 'nullable|date|after_or_or_equal:available_at',
             ]);
 
             // For assignment/activity, if no description, then file is required
@@ -183,6 +345,11 @@ class AssessmentController extends Controller
             Log::error('Assignment/Activity creation failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
             return response()->json(['error' => 'Failed to create assessment: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function showAssignment(Assessment $assessment)
+    {
+        return view('instructor.assessment.showAssignment', compact('assessment'));
     }
 
     /**

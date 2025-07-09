@@ -161,60 +161,69 @@
                     <div class="mb-6 ml-8">
                         <table class="min-w-full divide-y divide-gray-200 mb-4">
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach ($items as $item)
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap align-top">
-                                            <div class="flex justify-between items-start"> {{-- Added flex, justify-between, items-start --}}
-                                                <div class="flex flex-col space-y-1">
-                                                    <div class="text-md font-medium font-style-bold text-gray-900">
-                                                        @if ($item->item_type == 'material')
-                                                            <a href="{{ route('materials.show', $item->id) }}">&#128193; {{ $item->title }}</a>
-                                                        @elseif ($item->item_type == 'assessment')
-                                                            {{-- Link to view assessment details --}}
-                                                            <a href="">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
-                                                        @endif
-                                                    </div>
-                                                    <div class="text-sm text-gray-500">
-                                                        {{ $item->description }}
-                                                    </div>
-                                                </div>
-                                                {{-- Actions Dropdown for Materials/Assessments --}}
-                                                <div class="relative inline-block text-left">
-                                                    <div>
-                                                        <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 item-action-button" id="options-menu-button-{{ $item->item_type }}-{{ $item->id }}" aria-expanded="true" aria-haspopup="true">
-                                                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
+                                {{-- resources/views/courses/show.blade.php --}}
 
-                                                    <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 item-action-menu" role="menu" aria-orientation="vertical" aria-labelledby="options-menu-button-{{ $item->item_type }}-{{ $item->id }}" tabindex="-1">
-                                                        <div class="py-1" role="none">
-                                                            @if($item->item_type === 'material')
-                                                                @if($item->file_path)
-                                                                    <a href="{{ route('materials.download', $item->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Download</a>
-                                                                @endif
-                                                                <a href="" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
-                                                                <form action="" method="POST" class="block" role="none">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit" class="text-red-600 w-full text-left block px-4 py-2 text-sm hover:bg-red-100 hover:text-red-900" role="menuitem" tabindex="-1" onclick="return confirm('Are you sure you want to delete this material? This action cannot be undone.')">Delete</button>
-                                                                </form>
-                                                            @else {{-- Assessment --}}
-                                                                <a href="" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">View/Edit</a>
-                                                                <form action="" method="POST" class="block" role="none">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit" class="text-red-600 w-full text-left block px-4 py-2 text-sm hover:bg-red-100 hover:text-red-900" role="menuitem" tabindex="-1" onclick="return confirm('Are you sure you want to delete this assessment? All student submissions and grades will be permanently lost.')">Delete</button>
-                                                                </form>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
+{{-- ... existing code ... --}}
+
+{{-- Inside the loop where you display assessments --}}
+@foreach ($items as $item)
+    <tr>
+        <td class="px-6 py-4 whitespace-nowrap align-top">
+            <div class="flex justify-between items-start">
+                <div class="flex flex-col space-y-1">
+                    <div class="text-md font-medium font-style-bold text-gray-900">
+                        @if ($item->item_type == 'material')
+                            <a href="{{ route('materials.show', $item->id) }}">&#128193; {{ $item->title }}</a>
+                        @elseif ($item->item_type == 'assessment')
+                            @if ($item->type == 'quiz' || $item->type == 'exam')
+                                <a href="{{ route('assessments.show.quiz', ['course' => $course->id, 'assessment' => $item->id]) }}">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
+                            @else
+                                <a href="">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
+                            @endif
+                        @endif
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        {{ $item->description }}
+                    </div>
+                </div>
+                {{-- Actions Dropdown for Materials/Assessments --}}
+                <div class="relative inline-block text-left">
+                    <div>
+                        <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 item-action-button" id="menu-button-{{ $item->id }}" aria-expanded="true" aria-haspopup="true">
+                            Options
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="item-action-menu origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10" role="menu" aria-orientation="vertical" aria-labelledby="menu-button-{{ $item->id }}" tabindex="-1">
+                        <div class="py-1" role="none">
+                            @if ($item->item_type == 'material')
+                                {{-- Material actions --}}
+                                <a href="{{ route('materials.show', $item->id) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">View</a>
+                                <a href="" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
+                                {{-- Add delete form for materials if needed --}}
+                            @elseif ($item->item_type == 'assessment')
+                                {{-- Assessment actions --}}
+                                @if ($item->type == 'quiz' || $item->type == 'exam')
+                                    <a href="{{ route('assessments.edit.quiz', ['course' => $course->id, 'assessment' => $item->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
+                                @else
+                                    <a href="" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
+                                @endif
+                                <form action="{{ route('assessments.destroy', ['course' => $course->id, 'assessment' => $item->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this assessment?');" class="block" role="none">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Delete</button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+    </tr>
+@endforeach
                             </tbody>
                         </table>
                     </div>

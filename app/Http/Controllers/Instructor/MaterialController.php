@@ -123,7 +123,6 @@ class MaterialController extends Controller
      */
     public function show(Material $material)
     {
-        $material->load('topic'); // Eager load the topic relationship if you display topic info on showMaterial page
         return view('instructor.material.showMaterial', compact('material'));
     }
 
