@@ -178,7 +178,7 @@
                             @if ($item->type == 'quiz' || $item->type == 'exam')
                                 <a href="{{ route('assessments.show.quiz', ['course' => $course->id, 'assessment' => $item->id]) }}">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
                             @else
-                                <a href="">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
+                                <a href="{{ route('assessments.show.assignment', ['course' => $course->id, 'assessment' => $item->id]) }}">&#128220; {{ $item->title }} ({{ ucfirst($item->type) }})</a>
                             @endif
                         @endif
                     </div>
@@ -209,7 +209,7 @@
                                 @if ($item->type == 'quiz' || $item->type == 'exam')
                                     <a href="{{ route('assessments.edit.quiz', ['course' => $course->id, 'assessment' => $item->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
                                 @else
-                                    <a href="" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
+                                    <a href="{{ route('assessments.edit.assignment', ['course' => $course->id, 'assessment' => $item->id]) }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Edit</a>
                                 @endif
                                 <form action="{{ route('assessments.destroy', ['course' => $course->id, 'assessment' => $item->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this assessment?');" class="block" role="none">
                                     @csrf

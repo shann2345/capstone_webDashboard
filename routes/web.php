@@ -87,14 +87,14 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
 
     Route::get('/courses/{course}/assessments/withQ/{type}', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
     Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');
-    Route::get('/courses/{course}/assessments/{assessment}/show', [AssessmentController::class, 'showQuiz'])->name('assessments.show.quiz');
-    Route::get('/courses/{course}/assessments/{assessment}/edit/quiz', [AssessmentController::class, 'editQuiz'])->name('assessments.edit.quiz');
-    Route::put('/courses/{course}/assessments/{assessment}/update/quiz', [AssessmentController::class, 'updateQuiz'])->name('assessments.update.quiz');
+    Route::get('/courses/{course}/assessments/{assessment}/showQ', [AssessmentController::class, 'showQuiz'])->name('assessments.show.quiz');
+    Route::get('/courses/{course}/assessments/{assessment}/edit/quizType', [AssessmentController::class, 'editQuiz'])->name('assessments.edit.quiz');
+    Route::put('/courses/{course}/assessments/{assessment}/update/quizType', [AssessmentController::class, 'updateQuiz'])->name('assessments.update.quiz');
     Route::delete('/{assessment}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
 
     Route::get('/courses/{course}/assessments/withOutQ/{typeAct}', [AssessmentController::class, 'createAssignment'])->name('assessments.create.assignment');
     Route::post('/courses/{course}/assessments/store/assignment', [AssessmentController::class, 'storeAssignment'])->name('assessments.store.assignment');
-    Route::get('/assessments/withOutQ/{typeAct}/show/', [AssessmentController::class, 'showAssignment'])->name('assessments.show.assignment');
-   
-
+    Route::get('/courses/{course}/assessments/{assessment}/showWoutQ', [AssessmentController::class, 'showAssignment'])->name('assessments.show.assignment');
+    Route::get('/courses/{course}/assessments/{assessment}/edit/assignmentType', [AssessmentController::class, 'editAssignment'])->name('assessments.edit.assignment');
+    Route::put('/courses/{course}/assessments/{assessment}/update/assignmentType', [AssessmentController::class, 'updateAssignment'])->name('assessments.update.assignment');
 });

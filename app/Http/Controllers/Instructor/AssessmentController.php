@@ -282,7 +282,6 @@ class AssessmentController extends Controller
         return view('instructor.assessment.createAssignment', compact('course', 'assessmentType', 'topicId'));
     }
 
-
     public function storeAssignment(Request $request, Course $course)
     {
         Log::info($request->all());
@@ -294,7 +293,9 @@ class AssessmentController extends Controller
                 'description' => 'nullable|string',
                 'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:20480', // 20MB
                 'available_at' => 'nullable|date',
-                'unavailable_at' => 'nullable|date|after_or_or_equal:available_at',
+                'unavailable_at' => 'nullable|date|after_or_equal:available_at', // Fixed typo here
+                'duration_minutes' => 'nullable|integer|min:0', // Added for assignments/activities/projects
+                'access_code' => 'nullable|string|max:255', // Added for assignments/activities/projects
             ]);
 
             // For assignment/activity, if no description, then file is required
@@ -319,9 +320,8 @@ class AssessmentController extends Controller
                 'type' => $validatedAssessmentData['type'],
                 'description' => $validatedAssessmentData['description'] ?? null,
                 'assessment_file_path' => $assessmentFilePath,
-                // These fields are not relevant for simple assignments/activities
-                'duration_minutes' => null,
-                'access_code' => null,
+                'duration_minutes' => $validatedAssessmentData['duration_minutes'] ?? null, // Now included
+                'access_code' => $validatedAssessmentData['access_code'] ?? null, // Now included
                 'available_at' => $validatedAssessmentData['available_at'] ?? null,
                 'unavailable_at' => $validatedAssessmentData['unavailable_at'] ?? null,
                 'created_by' => Auth::id(),
@@ -347,9 +347,108 @@ class AssessmentController extends Controller
         }
     }
 
-    public function showAssignment(Assessment $assessment)
+    public function editAssignment(Course $course, Assessment $assessment)
     {
-        return view('instructor.assessment.showAssignment', compact('assessment'));
+        // Ensure the assessment belongs to the course and is of the correct type
+        if ($assessment->course_id !== $course->id || !in_array($assessment->type, ['assignment', 'activity', 'project'])) {
+            abort(404);
+        }
+
+        $assessmentType = $assessment->type;
+        $topicId = $assessment->topic_id; // Pass topicId if it exists
+
+        return view('instructor.assessment.createAssignment', compact('course', 'assessmentType', 'topicId', 'assessment'));
+    }
+
+    public function updateAssignment(Request $request, Course $course, Assessment $assessment)
+    {
+        // Ensure the assessment belongs to the course and is of the correct type
+        if ($assessment->course_id !== $course->id || !in_array($assessment->type, ['assignment', 'activity', 'project'])) {
+            Log::warning("Mismatched course_id or invalid type for assignment update. Course ID in URL: {$course->id}, Assessment course_id: {$assessment->course_id}, Assessment ID: {$assessment->id}, Type: {$assessment->type}");
+            abort(403, 'Unauthorized action or invalid assessment type for this operation.');
+        }
+
+        DB::beginTransaction();
+        $filePath = $assessment->assessment_file_path; // Keep existing path by default
+        try {
+            $validatedData = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'assessment_file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:20480', // 20MB
+                'clear_assessment_file' => 'nullable|boolean', // New field for clearing file
+                'available_at' => 'nullable|date',
+                'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+                'duration_minutes' => 'nullable|integer|min:0',
+                'access_code' => 'nullable|string|max:255',
+                'topic_id' => 'nullable|exists:topics,id',
+            ]);
+
+            // For assignment/activity, if no description AND no existing file AND no new file, then file is required
+            if (empty($validatedData['description']) && !$request->hasFile('assessment_file') && !$assessment->assessment_file_path) {
+                 throw ValidationException::withMessages([
+                    'description' => ['For this assessment type, either a description or an assessment file is required.'],
+                    'assessment_file' => ['For this assessment type, either a description or an assessment file is required.'],
+                ]);
+            }
+
+            // Handle file upload or removal
+            if ($request->hasFile('assessment_file')) {
+                // Delete old file if exists
+                if ($filePath) {
+                    Storage::disk('public')->delete($filePath);
+                }
+                $filePath = $request->file('assessment_file')->store('assessments/' . $course->id, 'public');
+            } elseif ($request->input('clear_assessment_file') == '1') {
+                // If "remove current file" checkbox is checked and no new file uploaded
+                if ($filePath) {
+                    Storage::disk('public')->delete($filePath);
+                }
+                $filePath = null;
+            }
+
+
+            // Update the assessment
+            $assessment->fill([
+                'topic_id' => $validatedData['topic_id'] ?? null,
+                'title' => $validatedData['title'],
+                'description' => $validatedData['description'] ?? null,
+                'assessment_file_path' => $filePath, // Update file path
+                'duration_minutes' => $validatedData['duration_minutes'] ?? null,
+                'access_code' => $validatedData['access_code'] ?? null,
+                'available_at' => $validatedData['available_at'] ?? null,
+                'unavailable_at' => $validatedData['unavailable_at'] ?? null,
+            ])->save();
+
+            DB::commit();
+
+            return response()->json(['success' => true, 'redirect' => route('courses.show', $course->id)]);
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // If a new file was uploaded but transaction failed, delete the newly uploaded file
+            if ($request->hasFile('assessment_file') && isset($filePath) && Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
+            }
+            Log::error('Assignment update failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => 'Failed to update assessment: ' . $e->getMessage()], 500);
+        }
+    }
+
+
+    public function showAssignment(Course $course, Assessment $assessment)
+    {
+        if ($assessment->course_id !== $course->id) {
+            // Log the discrepancy for debugging purposes
+            Log::warning("Mismatched course_id for assessment. Course ID in URL: {$course->id}, Assessment course_id: {$assessment->course_id}, Assessment ID: {$assessment->id}");
+            abort(404, 'Quiz not found in this course.'); // Or return redirect()->back()->withErrors(...)
+        }
+        return view('instructor.assessment.showAssignment', compact('course' , 'assessment'));
     }
 
     /**
