@@ -10,15 +10,32 @@
 <body>
     <h1>Verify Your Email Address</h1>
 
-    <p>Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another.</p>
+    <p>Thanks for signing up! Before getting started, please enter the 6-digit verification code sent to your email address. If you didn't receive the email, we will gladly send you another.</p>
 
-    @if (session('status') == 'verification-link-sent')
+    @if (session('status'))
         <div style="color: green;">
-            A new verification link has been sent to the email address you provided during registration.
+            {{ session('status') }}
         </div>
     @endif
 
-    <form method="POST" action="{{ route('verification.send') }}">
+    @if ($errors->any())
+        <div style="color: red;">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('verification.verify.code') }}">
+        @csrf
+        <label for="verification_code">Verification Code:</label><br>
+        <input type="text" id="verification_code" name="verification_code" required autofocus><br><br>
+        <button type="submit">Verify Email</button>
+    </form>
+
+    <form method="POST" action="{{ route('verification.send') }}" style="margin-top: 10px;">
         @csrf
         <button type="submit">Resend Verification Email</button>
     </form>

@@ -9,10 +9,10 @@ use App\Http\Controllers\Instructor\MaterialController;
 use App\Http\Controllers\Instructor\AssessmentController;
 use App\Http\Controllers\Instructor\TopicController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
-
+use App\Http\Controllers\Auth\VerificationController; // NEW: Import the new controller
 
 Route::get('/', function () {
     return view('welcome');
@@ -35,14 +35,19 @@ Route::get('/email/verify', function () {
     return view('auth.verify-email');
 })->middleware('auth')->name('verification.notice');
 
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-    return redirect('/dashboard')->with('status', 'Your email has been verified!');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+// NEW: Route to handle code verification
+Route::post('/email/verify', [VerificationController::class, 'verifyCode'])->middleware(['auth', 'throttle:6,1'])->name('verification.verify.code');
 
 Route::post('/email/verification-notification', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return back()->with('status', 'Verification link sent!');
+    // Re-generate a new code and send it
+    $verificationCode = random_int(100000, 999999);
+    $expiresAt = Carbon\Carbon::now()->addMinutes(60); // Set expiry
+    $request->user()->update([
+        'email_verification_code' => $verificationCode,
+        'email_verification_code_expires_at' => $expiresAt,
+    ]);
+    $request->user()->notify(new App\Notifications\VerifyEmailWithCode($verificationCode));
+    return back()->with('status', 'A new verification code has been sent to your email address.');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
 
@@ -52,7 +57,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Generic dashboard route (for any logged-in user, redirects based on role)
-Route::middleware(['auth:web', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
+Route::middleware(['auth:web', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
         $user = Auth::user();
         if ($user->role === 'admin') {
@@ -65,7 +70,7 @@ Route::middleware(['auth:web', 'verified'])->group(function () { // <-- ADD 'ver
 });
 
 // Admin specific routes (requires authentication AND admin role AND verification)
-Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () { // <-- ADD 'verified' middleware here
+Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 });
 
