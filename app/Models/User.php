@@ -20,6 +20,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'program_id',
         'email_verification_code', // Add this
         'email_verification_code_expires_at', // Add this
+        'google_id',
     ];
 
     protected $hidden = [
@@ -54,5 +55,12 @@ class User extends Authenticatable implements MustVerifyEmail
         // We specify 'instructor_id' as the foreign key in the 'courses' table
         // that points back to this user's 'id'.
         return $this->hasMany(Course::class, 'instructor_id');
+    }
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'enrollments', 'student_id', 'course_id')
+                    ->withPivot('status', 'enrollment_date', 'grade') // Include pivot table columns if you added them
+                    ->withTimestamps(); // If your pivot table has created_at/updated_at
     }
 }

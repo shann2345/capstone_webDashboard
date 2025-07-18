@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Instructor\InstructorController;
 use App\Http\Controllers\Instructor\CourseController;
@@ -18,19 +19,17 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Display the login form
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 
-// Handle the login form submission
 Route::post('/login', [LoginController::class, 'login']);
 
-// Display the instructor registration form
 Route::get('/instructor/register', [RegisterController::class, 'showInstructorRegistrationForm'])->name('instructor.register.get');
 
-// Handle the instructor registration form submission
 Route::post('/instructor/register', [RegisterController::class, 'registerInstructor'])->name('instructor.register.post');
 
-// Email Verification Routes (Place these before authenticated routes that require verification)
+Route::get('/auth/google/redirect', [SocialLoginController::class, 'redirectToGoogle'])->name('socialite.google.redirect');
+Route::get('/auth/google/callback', [SocialLoginController::class, 'handleGoogleCallback']);
+
 Route::get('/email/verify', function () {
     return view('auth.verify-email');
 })->middleware('auth')->name('verification.notice');

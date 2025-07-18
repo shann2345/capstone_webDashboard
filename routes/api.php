@@ -3,7 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\VerificationController; // Import this
+use App\Http\Controllers\Api\VerificationController;
+use App\Http\Controllers\Api\StudentCourseController;
+use App\Http\Controllers\Api\EnrollmentController; // Add this line
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -13,13 +15,22 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Verification API routes
     Route::get('/user/verification-status', [VerificationController::class, 'getStatus']);
     Route::post('/email/verification-notification', [VerificationController::class, 'sendVerificationEmail']);
-    Route::post('/email/verify-code', [VerificationController::class, 'verifyCode']); // NEW route for code submission
-});
+    Route::post('/email/verify-code', [VerificationController::class, 'verifyCode']);
 
-// You might also want a route to get authenticated user details
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+    // Get authenticated user details
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    Route::get('/courses/search', [StudentCourseController::class, 'search']);
+
+    // Enrollment Routes
+    Route::post('/enroll', [EnrollmentController::class, 'enroll']);
+    Route::post('/unenroll', [EnrollmentController::class, 'unenroll']); // Optional: for dropping courses
+    Route::get('/my-courses', [EnrollmentController::class, 'myCourses']); // To list enrolled courses
+    Route::get('/courses/{course}', [StudentCourseController::class, 'show'])->name('api.courses.show');
+
+    // ... other authenticated routes
 });

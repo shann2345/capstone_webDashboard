@@ -54,4 +54,10 @@ class Course extends Model
     // Add future relationships here, e.g., to Quizzes, Students, etc.
     // public function quizzes() { return $this->hasMany(Quiz::class); }
     // public function students() { return $this->belongsToMany(User::class, 'enrollments'); }
+    public function students()
+    {
+        return $this->belongsToMany(User::class, 'enrollments', 'course_id', 'student_id')
+                    ->withPivot('status', 'enrollment_date', 'grade') // Include pivot table columns
+                    ->withTimestamps(); // If your pivot table has created_at/updated_at
+    }
 }
