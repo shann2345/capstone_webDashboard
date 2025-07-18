@@ -1,117 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up for Your LMS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sign Up | LMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
     <style>
+        :root {
+            --primary: #2d89ef;
+            --primary-dark: #1b66c9;
+            --error: #e74c3c;
+            --background: #f9fafb;
+            --text: #333;
+            --radius: 0.75rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--background);
+            color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            margin: 0;
-            color: #333;
+            padding: 1rem;
         }
-        .signup-container {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+        .card {
+            background: #fff;
+            padding: 2.5rem;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            max-width: 460px;
             width: 100%;
-            max-width: 450px;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
             text-align: center;
         }
+
         h1 {
+            margin: 0 0 2rem;
+            font-size: 1.75rem;
+            font-weight: 600;
+            text-align: center;
             color: #2c3e50;
-            margin-bottom: 25px;
-            font-size: 2.2em;
-            font-weight: 700;
         }
-        .logo {
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            color: #3498db;
-            font-weight: bold;
-        }
+
         .input-group {
-            margin-bottom: 20px;
-            text-align: left;
+            margin-bottom: 1.5rem;
         }
+
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             font-weight: 600;
+            font-size: 0.95rem;
             color: #555;
         }
-        input[type="text"],
-        input[type="email"],
-        input[type="password"] {
-            width: calc(100% - 20px);
-            padding: 12px 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            box-sizing: border-box;
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ccc;
+            border-radius: var(--radius);
+            font-size: 1rem;
             transition: border-color 0.3s;
         }
-        input[type="text"]:focus,
-        input[type="email"]:focus,
-        input[type="password"]:focus {
-            border-color: #3498db;
+
+        input:focus {
+            border-color: var(--primary);
             outline: none;
         }
+
         .btn-primary {
-            background-color: #3498db;
-            color: white;
-            padding: 14px 25px;
+            background-color: var(--primary);
+            color: #fff;
+            width: 100%;
+            padding: 0.85rem;
+            font-size: 1rem;
+            font-weight: 600;
             border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
+            border-radius: var(--radius);
             cursor: pointer;
             transition: background-color 0.3s, transform 0.2s;
-            width: 100%;
-            font-weight: 600;
-            margin-top: 10px;
         }
+
         .btn-primary:hover {
-            background-color: #2980b9;
-            transform: translateY(-2px);
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
         }
+
         .btn-google {
-            background-color: #dd4b39; /* Google Red */
-            color: white;
-            padding: 14px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            width: 100%;
-            font-weight: 600;
-            margin-top: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 0.6rem;
+            background-color: #fff;
+            color: #555;
+            border: 1px solid #ccc;
+            padding: 0.8rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1rem;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-top: 1rem;
         }
+
         .btn-google:hover {
-            background-color: #c23321;
-            transform: translateY(-2px);
+            background-color: #f1f1f1;
+            transform: translateY(-1px);
         }
+
         .btn-google img {
-            margin-right: 10px;
             width: 20px;
             height: 20px;
         }
+
         .separator {
-            margin: 30px 0;
-            position: relative;
+            margin: 2rem 0;
             text-align: center;
+            position: relative;
+            font-size: 0.85rem;
             color: #aaa;
         }
+
         .separator::before,
         .separator::after {
             content: '';
@@ -119,53 +143,61 @@
             top: 50%;
             width: 40%;
             height: 1px;
-            background-color: #eee;
+            background: #ddd;
         }
+
         .separator::before {
             left: 0;
         }
+
         .separator::after {
             right: 0;
         }
+
         .separator span {
-            background-color: #fff;
-            padding: 0 10px;
+            background: #fff;
+            padding: 0 0.5rem;
             position: relative;
             z-index: 1;
         }
+
         .links {
-            margin-top: 25px;
-            font-size: 0.95em;
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.9rem;
         }
+
         .links a {
-            color: #3498db;
+            color: var(--primary);
             text-decoration: none;
             transition: color 0.3s;
         }
+
         .links a:hover {
             text-decoration: underline;
-            color: #2980b9;
+            color: var(--primary-dark);
         }
+
         .error-message {
-            color: #e74c3c;
-            background-color: #fdeded;
-            border: 1px solid #e74c3c;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-size: 0.9em;
+            background-color: #ffe6e6;
+            color: var(--error);
+            border: 1px solid var(--error);
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
         }
+
         .error-message ul {
             margin: 0;
-            padding-left: 20px;
+            padding-left: 1.2rem;
         }
     </style>
 </head>
 <body>
-    <div class="signup-container">
+    <div class="card">
         <div class="logo">LMS</div>
-        <h1>Join Our LMS!</h1>
+        <h1>Create Your Account</h1>
 
         @if ($errors->any())
             <div class="error-message">
@@ -205,20 +237,21 @@
 
         <div class="separator"><span>OR</span></div>
 
-        <!-- Google Sign-Up Button (for web-based flow) -->
         <a href="{{ route('socialite.google.redirect') }}" class="btn-google">
             <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google logo"/>
             Sign up with Google
         </a>
 
         <div class="links">
-            <p>Already have an account? <a href="{{ route('login') }}">Login here</a></p>
+            <p>Already have an account? <a href="{{ route('login') }}">Log in</a></p>
         </div>
     </div>
+
     <script>
         document.getElementById('createRegisterForm').addEventListener('submit', function() {
-            document.getElementById('submitRegisterButton').setAttribute('disabled', 'disabled');
-            document.getElementById('submitRegisterButton').innerText = 'Processing...';
+            const button = document.getElementById('submitRegisterButton');
+            button.disabled = true;
+            button.innerText = 'Processing...';
         });
     </script>
 </body>

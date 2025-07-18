@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str; // <--- ADD THIS LINE
 
 class SocialLoginController extends Controller
 {
@@ -57,7 +58,7 @@ class SocialLoginController extends Controller
                     'email' => $googleUser->email,
                     'google_id' => $googleUser->id,
                     'password' => Hash::make(Str::random(24)), // Generate a random password for social users
-                    'role' => 'student', // Default role for new social sign-ups
+                    'role' => 'instructor', // Default role for new social sign-ups
                     'email_verified_at' => now(), // Assume email is verified by Google
                 ]);
                 Auth::login($user, true);
