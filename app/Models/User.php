@@ -18,8 +18,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'role',
         'program_id',
-        'email_verification_code', // Add this
-        'email_verification_code_expires_at', // Add this
+        'email_verification_code',
+        'email_verification_code_expires_at',
         'google_id',
     ];
 
@@ -33,34 +33,34 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'email_verification_code_expires_at' => 'datetime', // Cast this to datetime
+            'email_verification_code_expires_at' => 'datetime',
         ];
     }
 
-    /**
-     * Get the program that the user (e.g., instructor) belongs to.
-     */
     public function program()
     {
         return $this->belongsTo(Program::class);
     }
 
-    /**
-     * Get the courses that the user (e.g., instructor) teaches.
-     * This defines a One-to-Many relationship from the instructor's perspective.
-     */
     public function taughtCourses()
     {
-        // A User (who is an instructor) can teach many Courses.
-        // We specify 'instructor_id' as the foreign key in the 'courses' table
-        // that points back to this user's 'id'.
         return $this->hasMany(Course::class, 'instructor_id');
     }
 
     public function courses()
     {
         return $this->belongsToMany(Course::class, 'enrollments', 'student_id', 'course_id')
-                    ->withPivot('status', 'enrollment_date', 'grade') // Include pivot table columns if you added them
-                    ->withTimestamps(); // If your pivot table has created_at/updated_at
+                    ->withPivot('status', 'enrollment_date', 'grade')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Check if the user is enrolled in a specific course.
+     * @param int $courseId
+     * @return bool
+     */
+    public function isEnrolledInCourse(int $courseId): bool
+    {
+        return $this->courses()->where('course_id', $courseId)->exists();
     }
 }

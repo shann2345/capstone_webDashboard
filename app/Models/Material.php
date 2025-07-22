@@ -27,19 +27,18 @@ class Material extends Model
         'unavailable_at',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
+
     protected $casts = [
         'available_at' => 'datetime',
         'unavailable_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * Get the course that owns the material.
-     */
+    protected function serializeDate(\DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d\TH:i:sP'); // ISO 8601 with timezone (e.g., 2025-07-20T12:00:00+08:00)
+    }
     public function course()
     {
         return $this->belongsTo(Course::class);
