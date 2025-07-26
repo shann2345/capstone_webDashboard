@@ -10,16 +10,17 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('submitted_question_options', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('submitted_question_id')->constrained('submitted_questions')->onDelete('cascade'); // Link to the submitted question
-            $table->foreignId('question_option_id')->constrained('question_options')->onDelete('cascade'); // Link to the original option chosen
-            $table->timestamps();
-            // Optional: Ensure a specific option is only submitted once per submitted question
-            $table->unique(['submitted_question_id', 'question_option_id']);
-        });
-    }
+        {
+            Schema::create('submitted_question_options', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('submitted_question_id')->constrained('submitted_questions')->onDelete('cascade');
+                $table->foreignId('question_option_id')->constrained('question_options')->onDelete('cascade'); // Link to original option
+                $table->text('option_text'); // Snapshot of the option text
+                $table->boolean('is_correct_option'); // Was this option correct at the time of snapshot?
+                $table->boolean('is_selected')->default(false); // Did the student select this option?
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

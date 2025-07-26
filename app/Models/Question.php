@@ -39,7 +39,18 @@ class Question extends Model
     }
     public function options()
     {
-        return $this->hasMany(QuestionOption::class)->orderBy('option_order');
+        return $this->hasMany(QuestionOption::class, 'question_id')->orderBy('option_order');
+    }
+    public function questionOptions()
+    {
+        // A Question has many QuestionOptions
+        // Assuming 'question_id' is the foreign key in the 'question_options' table
+        return $this->hasMany(QuestionOption::class, 'question_id')->orderBy('option_order', 'asc');
+    }
+
+    public function submittedQuestions()
+    {
+        return $this->hasMany(SubmittedQuestion::class);
     }
 }
 

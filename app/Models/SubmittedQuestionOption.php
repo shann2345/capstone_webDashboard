@@ -9,29 +9,26 @@ class SubmittedQuestionOption extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'submitted_question_id',
-        'question_option_id',
+        'question_option_id', // Reference to original option
+        'option_text', // Added: Snapshot of the option text
+        'is_correct_option', // Added: Was this option correct at the time of snapshot?
+        'is_selected', // Added: Did the student select this option?
     ];
 
-    /**
-     * Get the submitted question that this option belongs to.
-     */
+    protected $casts = [
+        'is_correct_option' => 'boolean', // Added
+        'is_selected' => 'boolean', // Added
+    ];
+
     public function submittedQuestion()
     {
         return $this->belongsTo(SubmittedQuestion::class);
     }
-
-    /**
-     * Get the original question option associated with this submitted option.
-     */
     public function questionOption()
     {
         return $this->belongsTo(QuestionOption::class);
     }
 }
+    
