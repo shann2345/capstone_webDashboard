@@ -1,4 +1,3 @@
-// resources/views/instructor/assessment/createAssignment.blade.php
 <x-layout>
     <x-slot name="title">
         @isset($assessment)

@@ -9,12 +9,6 @@ class Assessment extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     * These must match your database columns.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'course_id',
         'topic_id',
@@ -27,13 +21,9 @@ class Assessment extends Model
         'available_at',
         'unavailable_at',
         'created_by',
+        'max_attempts',
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'available_at' => 'datetime',
         'unavailable_at' => 'datetime',

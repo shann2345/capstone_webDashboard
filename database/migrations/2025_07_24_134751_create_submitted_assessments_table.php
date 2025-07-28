@@ -17,6 +17,7 @@ return new class extends Migration
                 $table->foreignId('assessment_id')->constrained('assessments')->onDelete('cascade');
                 $table->integer('score')->nullable(); // Nullable for assignments or incomplete quizzes
                 $table->string('status')->default('in_progress'); // e.g., 'in_progress', 'completed', 'graded'
+                $table->integer('attempt_number')->default(1); // Tracks which attempt this particular submission is (1st, 2nd, etc.)
                 $table->timestamp('submitted_at')->nullable(); // When the student finalizes the submission
                 $table->timestamp('started_at')->useCurrent(); // When the student started the attempt
                 $table->timestamp('completed_at')->nullable(); // When the student finalized the attempt
@@ -33,3 +34,4 @@ return new class extends Migration
         Schema::dropIfExists('submitted_assessments');
     }
 };
+

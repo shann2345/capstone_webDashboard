@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('assessment_file_path')->nullable(); // For uploaded files
             $table->integer('duration_minutes')->nullable(); // For quizzes/exams
+            $table->integer('max_attempts')->nullable()->default(1); 
             $table->string('access_code')->nullable(); // For quizzes/exams
             $table->timestamp('available_at')->nullable();
             $table->timestamp('unavailable_at')->nullable();

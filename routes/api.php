@@ -41,18 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Assessment Routes
     Route::get('/assessments/{assessment}', [StudentAssessmentController::class, 'show']);
-
-    // Submitted Assessment Routes (for student submissions)
-    // Route to start a quiz attempt (creates submitted_assessment, snapshots questions)
+    Route::get('/assessments/{assessment}/attempt-status', [StudentSubmittedAssessmentController::class, 'getAttemptStatus']);
     Route::post('/assessments/{assessment}/start-quiz-attempt', [StudentSubmittedAssessmentController::class, 'startQuizAttempt']);
-
-    // Route to submit an assignment file (creates/updates submitted_assessment)
     Route::post('/assessments/{assessment}/submit-assignment', [StudentSubmittedAssessmentController::class, 'submitAssignment']);
-
-    // Route to get a specific submitted assessment (for resuming quiz, viewing results)
     Route::get('/submitted-assessments/{submittedAssessment}', [StudentSubmittedAssessmentController::class, 'showSubmittedAssessment']);
-
-    // Additional routes for quiz functionality
     Route::patch('/submitted-questions/{submittedQuestion}/answer', [StudentSubmittedAssessmentController::class, 'updateSubmittedQuestionAnswer']);
     Route::post('/submitted-assessments/{submittedAssessment}/finalize-quiz', [StudentSubmittedAssessmentController::class, 'finalizeQuizAttempt']);
 });
