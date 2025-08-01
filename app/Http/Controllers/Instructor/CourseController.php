@@ -64,11 +64,5 @@ class CourseController extends Controller
         return view('instructor.course.show', compact('course', 'topics', 'independentAssessments'));
     }
 
-    /**
-     * Search for courses by title or course_code.
-     * Course code search is strict (case-sensitive, exact match).
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
+
 }

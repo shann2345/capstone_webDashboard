@@ -82,9 +82,10 @@ class AssessmentController extends Controller
                 ]);
 
                 // Handle correct_answer and options
+                // In the storeQuiz method, inside the foreach loop for questions
                 if ($q['question_type'] === 'multiple_choice') {
                     $question->correct_answer = $q['correct_answer'];
-                    $question->save();
+                        $question->save();
 
                     // Save options
                     if (isset($q['options']) && is_array($q['options'])) {
@@ -104,6 +105,19 @@ class AssessmentController extends Controller
                 } elseif ($q['question_type'] === 'true_false') {
                     $question->correct_answer = $q['correct_answer']; // 'true' or 'false'
                     $question->save();
+                    
+                    // Create 'True' and 'False' options for the true/false question
+                    \App\Models\QuestionOption::create([
+                        'question_id' => $question->id,
+                        'option_text' => 'True',
+                        'option_order' => 0,
+                    ]);
+                    \App\Models\QuestionOption::create([
+                        'question_id' => $question->id,
+                        'option_text' => 'False',
+                        'option_order' => 1,
+                    ]);
+
                 } else {
                     $question->save();
                 }
@@ -199,36 +213,48 @@ class AssessmentController extends Controller
             // Delete questions that are no longer in the submitted data
             $assessment->questions()->whereNotIn('id', $submittedQuestionIds)->delete();
 
-            foreach ($validatedData['questions'] as $order => $questionData) { // $order here is the array index from the frontend
+            // In the updateQuiz method, inside the foreach loop for questions
+            foreach ($validatedData['questions'] as $order => $questionData) {
                 $question = $assessment->questions()->updateOrCreate(
-                    ['id' => $questionData['id'] ?? null], // Match by ID for existing, create new if null
+                    ['id' => $questionData['id'] ?? null],
                     [
                         'question_text' => $questionData['question_text'],
                         'question_type' => $questionData['question_type'],
-                        'points' => $questionData['points'], // Ensure points are saved/updated
-                        'order' => $order, // Use loop index for order
+                        'points' => $questionData['points'],
+                        'order' => $order,
                         'correct_answer' => $questionData['correct_answer'] ?? null,
                     ]
                 );
 
-                // Handle options for multiple_choice questions
+                // Handle options for different question types
                 if ($questionData['question_type'] === 'multiple_choice' && isset($questionData['options'])) {
                     $submittedOptionIds = collect($questionData['options'])->pluck('id')->filter()->toArray();
-
-                    // Delete options for this question that are no longer in the submitted data
                     $question->options()->whereNotIn('id', $submittedOptionIds)->delete();
 
                     foreach ($questionData['options'] as $optionOrder => $optionData) {
                         $question->options()->updateOrCreate(
-                            ['id' => $optionData['id'] ?? null], // Match by ID for existing, create new if null
+                            ['id' => $optionData['id'] ?? null],
                             [
                                 'option_text' => $optionData['option_text'],
-                                'option_order' => $optionOrder, // Use loop index for order
+                                'option_order' => $optionOrder,
                             ]
                         );
                     }
+                } elseif ($questionData['question_type'] === 'true_false') {
+                    // If question is true/false, delete existing options and create 'True' and 'False'
+                    $question->options()->delete();
+                    \App\Models\QuestionOption::create([
+                        'question_id' => $question->id,
+                        'option_text' => 'True',
+                        'option_order' => 0,
+                    ]);
+                    \App\Models\QuestionOption::create([
+                        'question_id' => $question->id,
+                        'option_text' => 'False',
+                        'option_order' => 1,
+                    ]);
                 } else {
-                    // If question type changes from multiple_choice, delete all its options
+                    // If question type changes from one with options to one without, delete all options
                     $question->options()->delete();
                 }
             }

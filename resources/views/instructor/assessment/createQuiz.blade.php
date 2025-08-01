@@ -292,8 +292,8 @@
             <label class="block text-gray-700 text-sm font-bold mb-2">Correct Answer <span class="text-red-500">*</span></label>
             <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" name="questions[IDX][correct_answer]" required>
                 <option value="">Select Answer</option>
-                <option value="true">True</option>
-                <option value="false">False</option>
+                <option value="True">True</option>
+                <option value="False">False</option>
             </select>
         </div>
     </template>

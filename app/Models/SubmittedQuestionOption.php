@@ -28,7 +28,7 @@ class SubmittedQuestionOption extends Model
     }
     public function questionOption()
     {
-        return $this->belongsTo(QuestionOption::class);
+        return $this->belongsTo(QuestionOption::class, 'question_option_id');
     }
 }
     

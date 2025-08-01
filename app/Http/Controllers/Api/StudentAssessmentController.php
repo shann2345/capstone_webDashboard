@@ -7,31 +7,47 @@ use App\Models\Assessment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; // Import Storage facade
 use Illuminate\Support\Facades\Auth; // Import Auth facade
+use Illuminate\Support\Facades\Log; // Import Log facade for debugging
 
 class StudentAssessmentController extends Controller
 {
-    /**
-     * Display the specified assessment.
-     * Eager loads questions and their options if it's a quiz/exam.
-     *
-     * @param  \App\Models\Assessment  $assessment
-     * @return \Illuminate\Http\Response
-     */
     public function show(Assessment $assessment) {
-        // Eager load questions and their options
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!method_exists($user, 'isEnrolledInCourse') || !$user->isEnrolledInCourse($assessment->course_id)) {
+            return response()->json(['message' => 'Unauthorized: Not enrolled in the course for this assessment.'], 403);
+        }
+
+        // Eager load questions and their options (important for quizzes/exams)
         $assessment = Assessment::with('questions.options')->find($assessment->id);
 
+        // Initialize assessmentFileUrl
+        $assessmentFileUrl = null;
+
+        // Check if there's an assessment_file_path and if the file exists on disk
+        if ($assessment->assessment_file_path) {
+            if (Storage::disk('public')->exists($assessment->assessment_file_path)) {
+                $assessmentFileUrl = asset(Storage::url($assessment->assessment_file_path));
+                Log::info("Generated assessment_file_url: {$assessmentFileUrl} for path: {$assessment->assessment_file_path}");
+            } else {
+                Log::warning("Assessment file path exists in DB but file not found on disk: {$assessment->assessment_file_path}");
+            }
+        } else {
+            Log::info("No assessment_file_path set for assessment ID: {$assessment->id}");
+        }
+
+        // Return the assessment data, merging in the new assessment_file_url
         return response()->json([
-            'assessment' => $assessment
+            'assessment' => array_merge(
+                $assessment->toArray(), // Convert the assessment model to an array
+                ['assessment_file_url' => $assessmentFileUrl] // Add the generated URL
+            )
         ]);
     }
 
-    /**
-     * Download the specified assessment file.
-     *
-     * @param  \App\Models\Assessment  $assessment
-     * @return \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\StreamedResponse
-     */
     public function download(Assessment $assessment)
     {
         if (!$assessment->assessment_file_path || !Storage::exists($assessment->assessment_file_path)) {
@@ -48,47 +64,4 @@ class StudentAssessmentController extends Controller
 
         return Storage::download($path, $fileName);
     }
-
-    /**
-     * Handle student submission for an assessment.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Assessment  $assessment
-     * @return \Illuminate\Http\Response
-     */
-    // public function uploadSubmission(Request $request, Assessment $assessment)
-    // {
-    //     // Validate the request
-    //     $request->validate([
-    //         'submission_file' => 'required|file|max:10240', // Max 10MB file
-    //         // Add other validations as needed, e.g., allowed mimetypes
-    //     ]);
-
-    //     // You might add authorization here (e.g., only enrolled students can submit)
-    //     // if (!Auth::user()->isEnrolledInCourse($assessment->course_id)) {
-    //     //     return response()->json(['message' => 'Unauthorized'], 403);
-    //     // }
-
-    //     // Determine the storage path for submissions
-    //     // Example: submissions/course_{course_id}/assessment_{assessment_id}/user_{user_id}/filename.ext
-    //     $filePath = $request->file('submission_file')->store(
-    //         'submissions/courses/' . $assessment->course_id . '/assessments/' . $assessment->id . '/' . Auth::id(),
-    //         'public' // Use the 'public' disk
-    //     );
-
-    //     // Here you would typically save this file path to a 'submission' record
-    //     // associated with the student and the assessment.
-    //     // For example, if you have a Submission model:
-    //     // Submission::create([
-    //     //     'user_id' => Auth::id(),
-    //     //     'assessment_id' => $assessment->id,
-    //     //     'file_path' => $filePath,
-    //     //     'submitted_at' => now(),
-    //     // ]);
-
-    //     return response()->json([
-    //         'message' => 'Submission uploaded successfully!',
-    //         'file_path' => Storage::url($filePath) // Return public URL
-    //     ], 200);
-    // }
 }

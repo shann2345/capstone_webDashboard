@@ -20,7 +20,7 @@ class Question extends Model
         'question_text',
         'question_type',
         'points',
-        'correct_answer', // This column stores the answer based on question_type
+        'correct_answer', 
         'order',
     ];
 

@@ -15,16 +15,17 @@ class SubmittedAssessment extends Model
         'score',
         'status',
         'submitted_at',
-        'started_at', // Added for tracking quiz start time
-        'completed_at', // Added for tracking quiz completion time
-        'submitted_file_path', // Added for assignment submissions
+        'started_at', 
+        'completed_at', 
+        'submitted_file_path', 
+        'original_filename',
     ];
 
     protected $casts = [
         'score' => 'integer',
         'submitted_at' => 'datetime',
-        'started_at' => 'datetime', // Cast to datetime
-        'completed_at' => 'datetime', // Cast to datetime
+        'started_at' => 'datetime', 
+        'completed_at' => 'datetime', 
     ];
 
     public function student()

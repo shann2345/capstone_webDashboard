@@ -11,10 +11,10 @@ class SubmittedQuestion extends Model
 
     protected $fillable = [
         'submitted_assessment_id',
-        'question_id', // Reference to original question
-        'question_text', // Added: Snapshot of the question text
-        'question_type', // Added: Snapshot of the question type
-        'max_points', // Added: Snapshot of the max points for this question
+        'question_id', 
+        'question_text', 
+        'question_type', 
+        'max_points', 
         'submitted_answer',
         'is_correct',
         'score_earned',

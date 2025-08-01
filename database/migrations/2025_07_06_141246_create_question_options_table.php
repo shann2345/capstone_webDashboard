@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('question_options', function (Blueprint $table) {
             $table->id();
             $table->foreignId('question_id')->constrained()->onDelete('cascade');
-            $table->text('option_text'); // The text of the option (e.g., "Option A text")
-            $table->integer('option_order'); // Display order of the option (0 for A, 1 for B, etc.)
+            $table->text('option_text'); 
+            $table->integer('option_order'); 
+            $table->boolean('is_correct')->default(false);
             $table->timestamps();
         });
     }
