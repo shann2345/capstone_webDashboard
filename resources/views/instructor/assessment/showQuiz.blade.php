@@ -16,11 +16,11 @@
         @endif
 
         @if($assessment->available_at)
-            <p class="text-gray-700 mb-2"><strong>Available From:</strong> {{ $assessment->available_at->format('M d, Y h:i A') }}</p>
+            <p class="text-gray-700 mb-2"><strong>Available From:</strong> {{ $assessment->available_at->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}</p>
         @endif
 
         @if($assessment->unavailable_at)
-            <p class="text-gray-700 mb-4"><strong>Available Until:</strong> {{ $assessment->unavailable_at->format('M d, Y h:i A') }}</p>
+            <p class="text-gray-700 mb-4"><strong>Available Until:</strong> {{ $assessment->unavailable_at->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}</p>
         @endif
 
         @if($assessment->assessment_file_path)

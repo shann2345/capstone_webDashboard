@@ -314,7 +314,63 @@
                 const formErrorsDiv = document.getElementById('form-errors');
                 const errorList = document.getElementById('error-list');
 
+                // --- NEW FUNCTION FOR VALIDATION ---
+                function validateMultipleChoiceOptions() {
+                    const questionItems = questionsContainer.querySelectorAll('.question-item');
+                    let hasErrors = false;
+                    const errorMessages = [];
+
+                    // Clear previous error states
+                    questionsContainer.querySelectorAll('input.border-red-500').forEach(input => {
+                        input.classList.remove('border-red-500');
+                        input.classList.add('border'); // Ensure default border is present
+                    });
+
+                    questionItems.forEach((questionItem, index) => {
+                        const questionTypeSelect = questionItem.querySelector('.question-type-select');
+                        if (questionTypeSelect.value === 'multiple_choice') {
+                            const optionsContainer = questionItem.querySelector('.options-container');
+                            const optionInputs = optionsContainer.querySelectorAll('input[name*="[option_text]"]');
+                            const seenOptions = new Set();
+                            
+                            optionInputs.forEach(input => {
+                                const optionText = input.value.trim().toLowerCase();
+                                if (optionText) {
+                                    if (seenOptions.has(optionText)) {
+                                        hasErrors = true;
+                                        errorMessages.push(`Duplicate options found for Question ${index + 1}. All options must be unique.`);
+                                        input.classList.add('border-red-500');
+                                    }
+                                    seenOptions.add(optionText);
+                                }
+                            });
+                        }
+                    });
+
+                    // Clear and display errors
+                    errorList.innerHTML = '';
+                    if (hasErrors) {
+                        formErrorsDiv.classList.remove('hidden');
+                        errorMessages.forEach(msg => {
+                            const li = document.createElement('li');
+                            li.textContent = msg;
+                            errorList.appendChild(li);
+                        });
+                        window.scrollTo(0, 0); // Scroll to top to show errors
+                        return false;
+                    } else {
+                        formErrorsDiv.classList.add('hidden');
+                        return true;
+                    }
+                }
+                
                 form.addEventListener('submit', function(e) {
+                    // Pre-submission validation for unique MC options
+                    if (!validateMultipleChoiceOptions()) {
+                        e.preventDefault();
+                        return;
+                    }
+
                     e.preventDefault();
                     submitButton.disabled = true;
                     uploadProgressModal.classList.remove('hidden');

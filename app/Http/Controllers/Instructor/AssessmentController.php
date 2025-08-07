@@ -15,22 +15,17 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class AssessmentController extends Controller
 {
-    /**
-     * Show the form for creating a new Quiz or Exam assessment.
-     * This form includes the question builder.
-     *
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\View\View
-     */
     public function createQuiz(Course $course, $type, Request $request)
     {
         $assessmentType = $type;
         $topicId = $request->query('topic_id');
         return view('instructor.assessment.createQuiz', compact('course', 'assessmentType', 'topicId'));
     }
+
     public function storeQuiz(Request $request, $courseId)
     {
         Log::info($request->all());
@@ -55,6 +50,11 @@ class AssessmentController extends Controller
             $filePath = $request->file('assessment_file')->store('assessments', 'public');
         }
 
+        // Corrected: Convert available_at and unavailable_at from local time to UTC
+        $localTimezone = 'Asia/Manila';
+        $availableAt = $validated['available_at'] ? Carbon::parse($validated['available_at'], $localTimezone)->setTimezone('UTC') : null;
+        $unavailableAt = $validated['unavailable_at'] ? Carbon::parse($validated['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
+
         // Create the assessment
         $assessment = \App\Models\Assessment::create([
             'course_id' => $courseId,
@@ -65,8 +65,8 @@ class AssessmentController extends Controller
             'assessment_file_path' => $filePath,
             'duration_minutes' => $validated['duration_minutes'] ?? null,
             'access_code' => $validated['access_code'] ?? null,
-            'available_at' => $validated['available_at'] ?? null,
-            'unavailable_at' => $validated['unavailable_at'] ?? null,
+            'available_at' => $availableAt,
+            'unavailable_at' => $unavailableAt,
             'created_by' => Auth::id(),
         ]);
 
@@ -136,6 +136,14 @@ class AssessmentController extends Controller
         // Load questions and their options
         $assessment->load('questions.options');
 
+        // Corrected: Convert UTC times to local time for display in the form
+        if ($assessment->available_at) {
+            $assessment->available_at = $assessment->available_at->setTimezone('Asia/Manila')->format('Y-m-d\TH:i');
+        }
+        if ($assessment->unavailable_at) {
+            $assessment->unavailable_at = $assessment->unavailable_at->setTimezone('Asia/Manila')->format('Y-m-d\TH:i');
+        }
+
         $assessmentType = $assessment->type; // 'quiz' or 'exam'
         $topicId = $assessment->topic_id; // Get topic_id if associated
 
@@ -194,6 +202,10 @@ class AssessmentController extends Controller
                 $filePath = null;
             }
 
+            // Corrected: Convert available_at and unavailable_at from local time to UTC
+            $localTimezone = 'Asia/Manila';
+            $availableAt = $validatedData['available_at'] ? Carbon::parse($validatedData['available_at'], $localTimezone)->setTimezone('UTC') : null;
+            $unavailableAt = $validatedData['unavailable_at'] ? Carbon::parse($validatedData['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
 
             // 4. Update assessment details
             $assessment->fill([
@@ -202,8 +214,8 @@ class AssessmentController extends Controller
                 'assessment_file_path' => $filePath, // Update file path
                 'duration_minutes' => $validatedData['duration_minutes'] ?? null,
                 'access_code' => $validatedData['access_code'] ?? null,
-                'available_at' => $validatedData['available_at'] ?? null,
-                'unavailable_at' => $validatedData['unavailable_at'] ?? null,
+                'available_at' => $availableAt,
+                'unavailable_at' => $unavailableAt,
             ])->save();
 
 
@@ -258,12 +270,8 @@ class AssessmentController extends Controller
                     $question->options()->delete();
                 }
             }
-
             DB::commit();
-
             return response()->json(['success' => true, 'redirect' => route('courses.show', $course->id)]);
-
-
         } catch (ValidationException $e) {
             DB::rollBack();
             return response()->json([
@@ -280,6 +288,7 @@ class AssessmentController extends Controller
             return response()->json(['error' => 'Failed to update quiz: ' . $e->getMessage()], 500);
         }
     }
+
 
     public function showQuiz(Course $course, Assessment $assessment)
     {
@@ -477,69 +486,4 @@ class AssessmentController extends Controller
         return view('instructor.assessment.showAssignment', compact('course' , 'assessment'));
     }
 
-    /**
-     * Show the form for creating an "Other" assessment type.
-     * This is the simplest form.
-     *
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\View\View
-     */
-    // public function createOther(Course $course)
-    // {
-    //     $course->load('materials');
-    //     $assessmentType = 'other';
-    //     return view('instructor.assessment.createOther', compact('course', 'assessmentType'));
-    // }
-
-    // /**
-    //  * Store a newly created "Other" assessment.
-    //  *
-    //  * @param  \Illuminate\Http\Request  $request
-    //  * @param  \App\Models\Course  $course
-    //  * @return \Illuminate\Http\JsonResponse
-    //  */
-    // public function storeOther(Request $request, Course $course)
-    // {
-    //     try {
-    //         $validatedAssessmentData = $request->validate([
-    //             'material_id' => 'nullable|exists:materials,id',
-    //             'title' => 'required|string|max:255',
-    //             'type' => ['required', Rule::in(['other'])], // Only allow 'other' here
-    //             'description' => 'nullable|string',
-    //             'available_at' => 'nullable|date',
-    //             'unavailable_at' => 'nullable|date|after_or_equal:available_at',
-    //         ]);
-
-    //         DB::beginTransaction();
-
-    //         $assessment = Assessment::create([
-    //             'course_id' => $course->id,
-    //             'material_id' => $validatedAssessmentData['material_id'] ?? null,
-    //             'title' => $validatedAssessmentData['title'],
-    //             'type' => $validatedAssessmentData['type'],
-    //             'description' => $validatedAssessmentData['description'] ?? null,
-    //             'assessment_file_path' => null, // Not applicable for 'other' unless specified
-    //             'duration_minutes' => null,
-    //             'access_code' => null,
-    //             'available_at' => $validatedAssessmentData['available_at'] ?? null,
-    //             'unavailable_at' => $validatedAssessmentData['unavailable_at'] ?? null,
-    //             'created_by' => Auth::id(),
-    //         ]);
-
-    //         DB::commit();
-
-    //         return response()->json(['success' => 'Assessment created successfully!', 'redirect' => route('courses.show', $course->id)]);
-
-    //     } catch (ValidationException $e) {
-    //         DB::rollBack();
-    //         return response()->json([
-    //             'message' => 'The given data was invalid.',
-    //             'errors' => $e->errors(),
-    //         ], 422);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         Log::error('Other assessment creation failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-    //         return response()->json(['error' => 'Failed to create assessment: ' . $e->getMessage()], 500);
-    //     }
-    // }
 }

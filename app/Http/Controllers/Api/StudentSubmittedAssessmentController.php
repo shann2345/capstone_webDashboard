@@ -118,7 +118,8 @@ class StudentSubmittedAssessmentController extends Controller
                             'submitted_question_id' => $submittedQuestion->id,
                             'question_option_id' => $option->id, // Use the actual option ID
                             'option_text' => $option->option_text,
-                            'is_correct_option' => (bool) $option->is_correct, // This comes from the question_options table
+                            // CORRECTED: Compare option_order with the question's correct_answer
+                            'is_correct_option' => $option->option_order == $question->correct_answer, 
                             'is_selected' => false,
                         ]);
                     }

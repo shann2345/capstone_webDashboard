@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage; // For file storage operations
 use Illuminate\Support\Facades\Response; // For file downloads
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule; // Import Rule for validation
+use Carbon\Carbon;
 
 class MaterialController extends Controller
 {
@@ -44,7 +45,7 @@ class MaterialController extends Controller
         );
 
         // 1. Validate the incoming request data
-        $request->validate([
+        $validated = $request->validate([
             'topic_id' => 'nullable|exists:topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -101,7 +102,11 @@ class MaterialController extends Controller
             $filePath = Storage::disk('public')->putFileAs($directory, $file, $fileName);
         }
 
-        // 3. Create the Material record in the database
+        
+        $localTimezone = 'Asia/Manila';
+        $availableAt = $validated['available_at'] ? Carbon::parse($validated['available_at'], $localTimezone)->setTimezone('UTC') : null;
+        $unavailableAt = $validated['unavailable_at'] ? Carbon::parse($validated['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
+
         $material = new Material();
         $material->course_id = $course->id;
         $material->topic_id = $request->input('topic_id');
@@ -110,8 +115,8 @@ class MaterialController extends Controller
         $material->file_path = $filePath; // Store the relative path
         $material->material_type = $fileType;
         $material->original_filename = $originalFilename; // Store original filename for download
-        $material->available_at = $request->available_at ? now()->parse($request->available_at) : null;
-        $material->unavailable_at = $request->unavailable_at ? now()->parse($request->unavailable_at) : null;
+        $material->available_at = $availableAt;
+        $material->unavailable_at = $unavailableAt;
         $material->save();
 
         // 4. Redirect back with success message

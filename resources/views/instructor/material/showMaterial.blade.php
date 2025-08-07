@@ -25,12 +25,12 @@
             <h2 class="text-xl font-semibold mb-2">Availability</h2>
             @if ($material->available_at || $material->unavailable_at)
                 @if ($material->available_at)
-                    <p><strong>Available From:</strong> {{ $material->available_at->format('M d, Y H:i A') }}</p>
+                    <p><strong>Available From:</strong> {{ $material->available_at->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}</p>
                 @else
                     <p><strong>Available From:</strong> Always (no start date specified)</p>
                 @endif
                 @if ($material->unavailable_at)
-                    <p><strong>Available Until:</strong> {{ $material->unavailable_at->format('M d, Y H:i A') }}</p>
+                    <p><strong>Available Until:</strong> {{ $material->unavailable_at->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}</p>
                 @else
                     <p><strong>Available Until:</strong> Never (no end date specified)</p>
                 @endif
