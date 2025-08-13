@@ -20,6 +20,9 @@ class StudentAssessmentController extends Controller
         if (!method_exists($user, 'isEnrolledInCourse') || !$user->isEnrolledInCourse($assessment->course_id)) {
             return response()->json(['message' => 'Unauthorized: Not enrolled in the course for this assessment.'], 403);
         }
+        if ($assessment->available_at && now()->lessThan($assessment->available_at)) {
+            return response()->json(['message' => 'Assessment is not yet available.'], 403);
+        }
 
         // Eager load questions and their options (important for quizzes/exams)
         $assessment = Assessment::with('questions.options')->find($assessment->id);

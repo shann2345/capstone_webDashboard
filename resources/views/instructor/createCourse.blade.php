@@ -83,9 +83,7 @@
 
     <script>
         document.getElementById('createCourseForm').addEventListener('submit', function() {
-            // Disable the submit button to prevent multiple submissions
             document.getElementById('submitCourseButton').setAttribute('disabled', 'disabled');
-            // Optionally, change the text or add a loading spinner
             document.getElementById('submitCourseButton').innerText = 'Creating...';
         });
     </script>

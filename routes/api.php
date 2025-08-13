@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\StudentMaterialController;
 use App\Http\Controllers\Api\StudentAssessmentController; 
 use App\Http\Controllers\Api\StudentSubmittedAssessmentController; 
+use App\Http\Controllers\Api\TimeController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -31,6 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/enroll', [EnrollmentController::class, 'enroll']);
     Route::post('/unenroll', [EnrollmentController::class, 'unenroll']);
 
+    Route::get('/time', [TimeController::class, 'index']);
+
+    // course routes
     Route::get('/my-courses', [EnrollmentController::class, 'myCourses']);
     Route::get('/courses/search', [StudentCourseController::class, 'search']);
     Route::get('/courses/{course}', [StudentCourseController::class, 'show'])->name('api.courses.show');
