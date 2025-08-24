@@ -41,7 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Material Routes
     Route::get('/materials/{material}', [StudentMaterialController::class, 'show']);
-    Route::get('/materials/{material}/download', [StudentMaterialController::class, 'download'])->name('api.materials.download');
+    Route::get('/materials/{material}/view', [StudentMaterialController::class, 'view']);
+    Route::get('/materials/{material}/download', [StudentMaterialController::class, 'download']);
+    Route::get('/materials/{material}/view-link', [StudentMaterialController::class, 'generateViewLink']); // NEW
+
 
     // Assessment Routes
     Route::get('/assessments/{assessment}', [StudentAssessmentController::class, 'show']);
@@ -53,3 +56,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/submitted-questions/{submittedQuestion}/answer', [StudentSubmittedAssessmentController::class, 'updateSubmittedQuestionAnswer']);
     Route::post('/submitted-assessments/{submittedAssessment}/finalize-quiz', [StudentSubmittedAssessmentController::class, 'finalizeQuizAttempt']);
 });
+
+Route::get('/materials/{material}/view-signed', [StudentMaterialController::class, 'viewSigned'])
+    ->name('materials.view.signed');

@@ -165,6 +165,8 @@ class StudentSubmittedAssessmentController extends Controller
         try {
             $request->validate([
                 'assignment_file' => 'required|file|max:10240|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,txt,zip,rar,jpg,jpeg,png',
+                // Add submitted_at as an optional validation rule
+                'submitted_at' => 'sometimes|date',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -192,15 +194,12 @@ class StudentSubmittedAssessmentController extends Controller
             if ($request->hasFile('assignment_file')) {
                 $file = $request->file('assignment_file');
                 $originalFileName = $file->getClientOriginalName();
-
                 // Clean the filename to prevent issues
                 $cleanFileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalFileName);
-
                 // Check if file with same name already exists and handle conflicts
                 $directory = 'submitted_assignments/' . $user->id . '/' . $assessment->id;
                 $finalFileName = $cleanFileName;
                 $counter = 1;
-
                 // If the same filename exists and it's not the current user's existing file, add a counter
                 while (Storage::disk('public')->exists($directory . '/' . $finalFileName)) {
                     $pathInfo = pathinfo($cleanFileName);
@@ -208,99 +207,63 @@ class StudentSubmittedAssessmentController extends Controller
                     $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
                     $finalFileName = $baseName . '_' . $counter . $extension;
                     $counter++;
-
                     // Break if we've tried too many times to avoid infinite loop
                     if ($counter > 100) {
                         $finalFileName = time() . '_' . $cleanFileName;
                         break;
                     }
                 }
-
                 // Store the file with the final filename
                 $filePath = $file->storeAs($directory, $finalFileName, 'public');
                 Log::info("New file uploaded. Original name: {$originalFileName}, Final path: {$filePath}");
-
                 // Verify the file was actually stored
                 if (!Storage::disk('public')->exists($filePath)) {
                     throw new \Exception("Failed to store the uploaded file");
                 }
             } else {
-                throw new \Exception("No file was uploaded");
+                throw new \Exception("No file uploaded");
             }
 
-            // Update or create the submission record with the new file path
+            // Get the submitted_at timestamp from the request, falling back to current time
+            $submittedAt = $request->input('submitted_at', now());
+
+            // Create or update the submitted assessment record
             $submittedAssessment = SubmittedAssessment::updateOrCreate(
+                ['student_id' => $user->id, 'assessment_id' => $assessment->id],
                 [
-                    'student_id' => $user->id,
-                    'assessment_id' => $assessment->id,
-                ],
-                [
-                    'status' => 'submitted',
-                    'submitted_at' => now(),
-                    'submitted_file_path' => $filePath, // Set the new file path
-                    'score' => null,
-                    'started_at' => $existingSubmission->started_at ?? now(),
-                    'completed_at' => now(),
+                    'submitted_file_path' => $filePath,
+                    'original_filename' => $originalFileName,
+                    'status' => 'submitted', // Change status to 'submitted'
+                    'submitted_at' => $submittedAt, // Use the submitted_at from the request or the current time
+                    'attempt_number' => DB::raw('attempt_number + 1') // Increment attempt number
                 ]
             );
 
-            // Verify the database was updated with the new file path
-            $submittedAssessment->refresh();
-            if ($submittedAssessment->submitted_file_path !== $filePath) {
-                throw new \Exception("Database was not updated with the new file path");
-            }
-
-            // Only delete the old file if:
-            // 1. There was an old file
-            // 2. A new file was successfully uploaded
-            // 3. The old and new file paths are different
-            // 4. The database was successfully updated
-            if ($oldFilePath && $filePath && $oldFilePath !== $filePath) {
-                if (Storage::disk('public')->exists($oldFilePath)) {
-                    $deleted = Storage::disk('public')->delete($oldFilePath);
-                    if ($deleted) {
-                        Log::info("Old file successfully deleted: {$oldFilePath}");
-                    } else {
-                        Log::warning("Failed to delete old file: {$oldFilePath}");
-                    }
-                } else {
-                    Log::warning("Old file did not exist when trying to delete: {$oldFilePath}");
-                }
+            // Clean up old file if a new one was successfully uploaded
+            if ($oldFilePath && Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+                Log::info("Old file deleted successfully: {$oldFilePath}");
             }
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Assignment submitted successfully!',
-                'submitted_assessment' => $submittedAssessment,
-                'file_path' => $filePath,
-                'original_filename' => $file->getClientOriginalName(),
-                'stored_filename' => basename($filePath)
+                'message' => 'Assignment submitted successfully.',
+                'submitted_at' => $submittedAssessment->submitted_at,
+                'submitted_assessment' => $submittedAssessment
             ], 200);
 
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            Log::error('Validation error during assignment submission: ' . json_encode($e->errors()));
+            return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-
-            // Clean up the new file if it was uploaded but the transaction failed
-            if ($filePath && Storage::disk('public')->exists($filePath)) {
-                $deleted = Storage::disk('public')->delete($filePath);
-                Log::error("Transaction failed, new file deleted: {$filePath}, deleted: " . ($deleted ? 'yes' : 'no'));
-            }
-
-            Log::error('Error submitting assignment: ' . $e->getMessage(), [
-                'exception' => $e,
-                'user_id' => $user->id,
-                'assessment_id' => $assessment->id,
-                'old_file_path' => $oldFilePath,
-                'new_file_path' => $filePath
-            ]);
-
-            return response()->json([
-                'message' => 'Failed to submit assignment. Please try again.',
-                'error' => $e->getMessage() // Remove this in production
-            ], 500);
+            Log::error('Error submitting assignment: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['message' => 'Failed to submit assignment. Please try again.'], 500);
         }
     }
+
     public function showSubmittedAssessment(SubmittedAssessment $submittedAssessment)
     {
         $user = Auth::user();
