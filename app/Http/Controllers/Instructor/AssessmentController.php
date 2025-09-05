@@ -348,6 +348,11 @@ class AssessmentController extends Controller
                 $assessmentFilePath = $request->file('assessment_file')->store('assessments/' . $course->id, 'public');
             }
 
+            // Corrected: Convert available_at and unavailable_at from local time to UTC
+            $localTimezone = 'Asia/Manila';
+            $availableAt = $validatedAssessmentData['available_at'] ? Carbon::parse($validatedAssessmentData['available_at'], $localTimezone)->setTimezone('UTC') : null;
+            $unavailableAt = $validatedAssessmentData['unavailable_at'] ? Carbon::parse($validatedAssessmentData['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
+
             $assessment = Assessment::create([
                 'course_id' => $course->id,
                 'topic_id' => $validatedAssessmentData['topic_id'] ?? null,
@@ -357,8 +362,8 @@ class AssessmentController extends Controller
                 'assessment_file_path' => $assessmentFilePath,
                 'duration_minutes' => $validatedAssessmentData['duration_minutes'] ?? null, // Now included
                 'access_code' => $validatedAssessmentData['access_code'] ?? null, // Now included
-                'available_at' => $validatedAssessmentData['available_at'] ?? null,
-                'unavailable_at' => $validatedAssessmentData['unavailable_at'] ?? null,
+                'available_at' => $availableAt,
+                'unavailable_at' => $unavailableAt,
                 'created_by' => Auth::id(),
             ]);
 
@@ -441,6 +446,9 @@ class AssessmentController extends Controller
                 $filePath = null;
             }
 
+            $localTimezone = 'Asia/Manila';
+            $availableAt = $validatedData['available_at'] ? Carbon::parse($validatedData['available_at'], $localTimezone)->setTimezone('UTC') : null;
+            $unavailableAt = $validatedData['unavailable_at'] ? Carbon::parse($validatedData['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
 
             // Update the assessment
             $assessment->fill([
@@ -450,8 +458,8 @@ class AssessmentController extends Controller
                 'assessment_file_path' => $filePath, // Update file path
                 'duration_minutes' => $validatedData['duration_minutes'] ?? null,
                 'access_code' => $validatedData['access_code'] ?? null,
-                'available_at' => $validatedData['available_at'] ?? null,
-                'unavailable_at' => $validatedData['unavailable_at'] ?? null,
+                'available_at' => $availableAt,
+                'unavailable_at' => $unavailableAt,
             ])->save();
 
             DB::commit();

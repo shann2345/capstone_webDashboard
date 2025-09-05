@@ -139,6 +139,249 @@ class StudentSubmittedAssessmentController extends Controller
             return response()->json(['message' => 'Failed to start quiz attempt. Please try again.'], 500);
         }
     }
+
+    public function syncOfflineQuiz(Request $request, Assessment $assessment)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        try {
+            // ... validation and data parsing ...
+            $validated = $request->validate([
+                'answers' => 'required|array',
+                'answers.*.question_id' => 'required|integer|exists:questions,id',
+                'answers.*.question_type' => 'required|string',
+                'answers.*.submitted_answer' => 'nullable|string',
+                'answers.*.selected_options' => 'nullable|array',
+                'answers.*.selected_options.*' => 'integer',
+                'started_at' => 'required|date',
+                'completed_at' => 'required|date',
+                'submitted_at' => 'required|string',
+            ]);
+            
+            $answersData = $validated['answers'];
+            if (is_string($answersData)) {
+                $answersData = json_decode($answersData, true);
+            }
+
+            if (empty($answersData)) {
+                return response()->json(['message' => 'No answers provided.'], 400);
+            }
+
+            DB::beginTransaction();
+
+            $completedAttemptsCount = SubmittedAssessment::where('student_id', $user->id)
+                ->where('assessment_id', $assessment->id)
+                ->whereIn('status', ['completed', 'graded'])
+                ->count();
+            $nextAttemptNumber = $completedAttemptsCount + 1;
+
+            $submittedAssessment = SubmittedAssessment::create([
+                'assessment_id' => $assessment->id,
+                'student_id' => $user->id,
+                'status' => 'completed',
+                'started_at' => $validated['started_at'],
+                'completed_at' => $validated['completed_at'],
+                'submitted_at' => $validated['submitted_at'],
+                'attempt_number' => $nextAttemptNumber,
+                'is_passed' => false,
+            ]);
+
+            $totalPointsEarned = 0;
+            $totalPossiblePoints = 0;
+
+            $questions = $assessment->questions()->with('options')->get();
+            $questionsById = $questions->keyBy('id');
+
+            foreach ($answersData as $answer) {
+                $originalQuestion = $questionsById->get($answer['question_id']);
+                if (!$originalQuestion) continue;
+
+                $totalPossiblePoints += $originalQuestion->points;
+                
+                // Initialize scoring variables
+                $isCorrect = false;
+                $pointsEarned = 0;
+                
+                $submittedAnswer = $answer['submitted_answer'] ?? '';
+    
+                // Create submitted question
+                $submittedQuestion = SubmittedQuestion::create([
+                    'submitted_assessment_id' => $submittedAssessment->id,
+                    'question_id' => $originalQuestion->id,
+                    'question_text' => $originalQuestion->question_text,
+                    'question_type' => $originalQuestion->question_type,
+                    'max_points' => $originalQuestion->points,
+                    'submitted_answer' => $submittedAnswer, // ✅ Always a string
+                    'is_correct' => $isCorrect,
+                ]);
+
+                // GRADING LOGIC - This was missing in the original method
+                if ($originalQuestion->question_type === 'multiple_choice') {
+                    // For multiple choice, check if selected option's order matches correct_answer
+                    $selectedOptions = collect($answer['selected_options'] ?? []);
+                    
+                    if ($selectedOptions->isNotEmpty()) {
+                        foreach ($selectedOptions as $selectedOptionId) {
+                            $questionOption = QuestionOption::find($selectedOptionId);
+                            if ($questionOption && $questionOption->option_order == $originalQuestion->correct_answer) {
+                                $isCorrect = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($isCorrect) {
+                        $pointsEarned = $originalQuestion->points;
+                        $totalPointsEarned += $pointsEarned;
+                    }
+
+                    // Create submitted options for tracking
+                    foreach ($originalQuestion->options as $option) {
+                        SubmittedQuestionOption::create([
+                            'submitted_question_id' => $submittedQuestion->id,
+                            'question_option_id' => $option->id,
+                            'option_text' => $option->option_text,
+                            'is_correct_option' => $option->is_correct ?? false,
+                            'is_selected' => $selectedOptions->contains($option->id),
+                        ]);
+                    }
+                    
+                } elseif ($originalQuestion->question_type === 'true_false') {
+                    // For true/false, use the same validation logic as finalizeQuizAttempt
+                    $isCorrect = $this->validateTrueFalseAnswerForOffline($answer, $originalQuestion);
+                    
+                    if ($isCorrect) {
+                        $pointsEarned = $originalQuestion->points;
+                        $totalPointsEarned += $pointsEarned;
+                    }
+
+                    // Create submitted options for tracking
+                    $selectedOptions = collect($answer['selected_options'] ?? []);
+                    foreach ($originalQuestion->options as $option) {
+                        SubmittedQuestionOption::create([
+                            'submitted_question_id' => $submittedQuestion->id,
+                            'question_option_id' => $option->id,
+                            'option_text' => $option->option_text,
+                            'is_correct_option' => $option->is_correct ?? false,
+                            'is_selected' => $selectedOptions->contains($option->id),
+                        ]);
+                    }
+                    
+                } elseif (in_array($originalQuestion->question_type, ['short_answer', 'identification'])) {
+                    // Simple case-insensitive string comparison for text-based answers
+                    if ($answer['submitted_answer'] && $originalQuestion->correct_answer) {
+                        $isCorrect = strtolower(trim($answer['submitted_answer'])) === strtolower(trim($originalQuestion->correct_answer));
+                    }
+                    
+                    if ($isCorrect) {
+                        $pointsEarned = $originalQuestion->points;
+                        $totalPointsEarned += $pointsEarned;
+                    }
+                    
+                } else {
+                    // For question types that require manual grading (e.g., essay), score is 0 initially.
+                    $pointsEarned = 0;
+                }
+
+                // Update the submitted question with calculated score and correctness
+                $submittedQuestion->update([
+                    'is_correct' => $isCorrect ? 1 : 0,
+                    'score_earned' => $pointsEarned,
+                ]);
+            }
+
+            // Update the submission with final score
+            $score = $totalPointsEarned;
+            $passingScore = ($assessment->passing_percentage ?? 50) / 100 * $totalPossiblePoints;
+            $isPassed = $totalPointsEarned >= $passingScore;
+
+            $submittedAssessment->update([
+                'score' => $score,
+                'is_passed' => $isPassed,
+            ]);
+
+            DB::commit();
+
+            return response()->json(['score' => $score, 'is_passed' => $isPassed], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error syncing offline quiz: ' . $e->getMessage(), [
+                'exception' => $e,
+                'line' => $e->getLine()
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while syncing the quiz.',
+                'error' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    private function validateTrueFalseAnswerForOffline($answerData, $originalQuestion)
+    {
+        // Strategy 1: Check selected options (if using option-based true/false)
+        $selectedOptionIds = collect($answerData['selected_options'] ?? []);
+        
+        if ($selectedOptionIds->isNotEmpty()) {
+            foreach ($selectedOptionIds as $selectedOptionId) {
+                $questionOption = QuestionOption::find($selectedOptionId);
+                if ($questionOption && $questionOption->option_order == $originalQuestion->correct_answer) {
+                    return true;
+                }
+            }
+        }
+
+        // Strategy 2: Check submitted_answer text directly
+        if (isset($answerData['submitted_answer']) && $originalQuestion->correct_answer) {
+            $submittedAnswer = strtolower(trim($answerData['submitted_answer']));
+            $correctAnswer = strtolower(trim($originalQuestion->correct_answer));
+            
+            // Direct text comparison
+            if ($submittedAnswer === $correctAnswer) {
+                return true;
+            }
+
+            // Handle common true/false variations
+            $trueVariations = ['true', 't', '1', 'yes', 'correct'];
+            $falseVariations = ['false', 'f', '0', 'no', 'incorrect'];
+            
+            $isSubmittedTrue = in_array($submittedAnswer, $trueVariations);
+            $isSubmittedFalse = in_array($submittedAnswer, $falseVariations);
+            $isCorrectTrue = in_array($correctAnswer, $trueVariations);
+            $isCorrectFalse = in_array($correctAnswer, $falseVariations);
+            
+            if (($isSubmittedTrue && $isCorrectTrue) || ($isSubmittedFalse && $isCorrectFalse)) {
+                return true;
+            }
+
+            // Strategy 3: If correct_answer is numeric (option_order), match with option text
+            if (is_numeric($correctAnswer)) {
+                $correctOption = QuestionOption::where('question_id', $originalQuestion->id)
+                    ->where('option_order', $correctAnswer)
+                    ->first();
+                
+                if ($correctOption) {
+                    $correctOptionText = strtolower(trim($correctOption->option_text));
+                    if ($submittedAnswer === $correctOptionText) {
+                        return true;
+                    }
+                    
+                    // Check if option text matches true/false variations
+                    if (($isSubmittedTrue && in_array($correctOptionText, $trueVariations)) ||
+                        ($isSubmittedFalse && in_array($correctOptionText, $falseVariations))) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function submitAssignment(Request $request, Assessment $assessment)
     {
         $user = Auth::user();
@@ -457,68 +700,68 @@ class StudentSubmittedAssessmentController extends Controller
         }
     }
 
-private function validateTrueFalseAnswer($submittedQuestion, $originalQuestion)
-{
-    // Strategy 1: Check selected options (if using option-based true/false)
-    $selectedOptions = $submittedQuestion->submittedOptions()
-        ->where('is_selected', true)
-        ->get();
+    private function validateTrueFalseAnswer($submittedQuestion, $originalQuestion)
+    {
+        // Strategy 1: Check selected options (if using option-based true/false)
+        $selectedOptions = $submittedQuestion->submittedOptions()
+            ->where('is_selected', true)
+            ->get();
 
-    if ($selectedOptions->isNotEmpty()) {
-        foreach ($selectedOptions as $selectedOption) {
-            $questionOption = QuestionOption::find($selectedOption->question_option_id);
-            if ($questionOption && $questionOption->option_order == $originalQuestion->correct_answer) {
+        if ($selectedOptions->isNotEmpty()) {
+            foreach ($selectedOptions as $selectedOption) {
+                $questionOption = QuestionOption::find($selectedOption->question_option_id);
+                if ($questionOption && $questionOption->option_order == $originalQuestion->correct_answer) {
+                    return true;
+                }
+            }
+        }
+
+        // Strategy 2: Check submitted_answer text directly
+        if ($submittedQuestion->submitted_answer && $originalQuestion->correct_answer) {
+            $submittedAnswer = strtolower(trim($submittedQuestion->submitted_answer));
+            $correctAnswer = strtolower(trim($originalQuestion->correct_answer));
+            
+            // Direct text comparison
+            if ($submittedAnswer === $correctAnswer) {
                 return true;
             }
-        }
-    }
 
-    // Strategy 2: Check submitted_answer text directly
-    if ($submittedQuestion->submitted_answer && $originalQuestion->correct_answer) {
-        $submittedAnswer = strtolower(trim($submittedQuestion->submitted_answer));
-        $correctAnswer = strtolower(trim($originalQuestion->correct_answer));
-        
-        // Direct text comparison
-        if ($submittedAnswer === $correctAnswer) {
-            return true;
-        }
-
-        // Handle common true/false variations
-        $trueVariations = ['true', 't', '1', 'yes', 'correct'];
-        $falseVariations = ['false', 'f', '0', 'no', 'incorrect'];
-        
-        $isSubmittedTrue = in_array($submittedAnswer, $trueVariations);
-        $isSubmittedFalse = in_array($submittedAnswer, $falseVariations);
-        $isCorrectTrue = in_array($correctAnswer, $trueVariations);
-        $isCorrectFalse = in_array($correctAnswer, $falseVariations);
-        
-        if (($isSubmittedTrue && $isCorrectTrue) || ($isSubmittedFalse && $isCorrectFalse)) {
-            return true;
-        }
-
-        // Strategy 3: If correct_answer is numeric (option_order), match with option text
-        if (is_numeric($correctAnswer)) {
-            $correctOption = QuestionOption::where('question_id', $originalQuestion->id)
-                ->where('option_order', $correctAnswer)
-                ->first();
+            // Handle common true/false variations
+            $trueVariations = ['true', 't', '1', 'yes', 'correct'];
+            $falseVariations = ['false', 'f', '0', 'no', 'incorrect'];
             
-            if ($correctOption) {
-                $correctOptionText = strtolower(trim($correctOption->option_text));
-                if ($submittedAnswer === $correctOptionText) {
-                    return true;
-                }
+            $isSubmittedTrue = in_array($submittedAnswer, $trueVariations);
+            $isSubmittedFalse = in_array($submittedAnswer, $falseVariations);
+            $isCorrectTrue = in_array($correctAnswer, $trueVariations);
+            $isCorrectFalse = in_array($correctAnswer, $falseVariations);
+            
+            if (($isSubmittedTrue && $isCorrectTrue) || ($isSubmittedFalse && $isCorrectFalse)) {
+                return true;
+            }
+
+            // Strategy 3: If correct_answer is numeric (option_order), match with option text
+            if (is_numeric($correctAnswer)) {
+                $correctOption = QuestionOption::where('question_id', $originalQuestion->id)
+                    ->where('option_order', $correctAnswer)
+                    ->first();
                 
-                // Check if option text matches true/false variations
-                if (($isSubmittedTrue && in_array($correctOptionText, $trueVariations)) ||
-                    ($isSubmittedFalse && in_array($correctOptionText, $falseVariations))) {
-                    return true;
+                if ($correctOption) {
+                    $correctOptionText = strtolower(trim($correctOption->option_text));
+                    if ($submittedAnswer === $correctOptionText) {
+                        return true;
+                    }
+                    
+                    // Check if option text matches true/false variations
+                    if (($isSubmittedTrue && in_array($correctOptionText, $trueVariations)) ||
+                        ($isSubmittedFalse && in_array($correctOptionText, $falseVariations))) {
+                        return true;
+                    }
                 }
             }
         }
-    }
 
-    return false;
-}
+        return false;
+    }
     public function getAttemptStatus(Assessment $assessment)
     {
         $user = Auth::user();

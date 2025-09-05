@@ -48,6 +48,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Assessment Routes
     Route::get('/assessments/{assessment}', [StudentAssessmentController::class, 'show']);
+    Route::get('/assessments/{assessment}/questions', [StudentAssessmentController::class, 'getQuestions']);
+
+    
     Route::get('/assessments/{assessment}/attempt-status', [StudentSubmittedAssessmentController::class, 'getAttemptStatus']);
     Route::post('/assessments/{assessment}/start-quiz-attempt', [StudentSubmittedAssessmentController::class, 'startQuizAttempt']);
     Route::post('/assessments/{assessment}/submit-assignment', [StudentSubmittedAssessmentController::class, 'submitAssignment']);
@@ -55,6 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/submitted-assessments/{submittedAssessment}', [StudentSubmittedAssessmentController::class, 'showSubmittedAssessment']);
     Route::patch('/submitted-questions/{submittedQuestion}/answer', [StudentSubmittedAssessmentController::class, 'updateSubmittedQuestionAnswer']);
     Route::post('/submitted-assessments/{submittedAssessment}/finalize-quiz', [StudentSubmittedAssessmentController::class, 'finalizeQuizAttempt']);
+
+    // Route for offline quiz
+    Route::post('/assessments/{assessment}/sync-offline-quiz', [StudentSubmittedAssessmentController::class, 'syncOfflineQuiz']);
 });
 
 Route::get('/materials/{material}/view-signed', [StudentMaterialController::class, 'viewSigned'])

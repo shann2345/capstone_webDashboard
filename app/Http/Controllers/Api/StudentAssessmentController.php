@@ -51,6 +51,34 @@ class StudentAssessmentController extends Controller
         ]);
     }
 
+    public function getQuestions(Assessment $assessment) 
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!method_exists($user, 'isEnrolledInCourse') || !$user->isEnrolledInCourse($assessment->course_id)) {
+            return response()->json(['message' => 'Unauthorized: Not enrolled in the course for this assessment.'], 403);
+        }
+
+        // Only allow questions for quiz and exam types
+        if (!in_array($assessment->type, ['quiz', 'exam'])) {
+            return response()->json(['message' => 'Questions are only available for quiz and exam assessments.'], 403);
+        }
+
+        if ($assessment->available_at && now()->lessThan($assessment->available_at)) {
+            return response()->json(['message' => 'Assessment is not yet available.'], 403);
+        }
+
+        // Load questions with their options
+        $assessment->load('questions.options');
+
+        return response()->json([
+            'questions' => $assessment->questions
+        ]);
+    }
+
     public function download(Assessment $assessment)
     {
         if (!$assessment->assessment_file_path || !Storage::exists($assessment->assessment_file_path)) {
