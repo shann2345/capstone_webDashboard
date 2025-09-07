@@ -36,7 +36,7 @@
         </div>
 
         <div class="mb-4">
-            <label for="course_code" class="block text-gray-700 text-sm font-bold mb-2">Course Code:</label>
+            <label for="course_code" class="block text-gray-700 text-sm font-bold mb-2">Enrollment Key:</label>
             <input type="text" id="course_code" name="course_code" value="{{ old('course_code') }}"
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
         </div>

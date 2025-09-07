@@ -14,11 +14,18 @@ class EnrollmentController extends Controller
     {
         $request->validate([
             'course_id' => 'required|exists:courses,id',
+            'course_code' => 'required|string',
         ]);
 
-        $user = Auth::user(); // The authenticated student
+        $user = Auth::user();
 
-        $course = Course::findOrFail($request->course_id);
+        // Find the course by ID
+        $course = Course::find($request->course_id);
+
+        // Check if the course exists and if the provided course_code matches exactly (case-sensitive)
+        if (!$course || $course->course_code !== $request->course_code) {
+            return response()->json(['message' => 'Invalid course ID or incorrect course code provided.'], 404);
+        }
 
         // Check if already enrolled
         if ($user->courses()->where('course_id', $course->id)->exists()) {
