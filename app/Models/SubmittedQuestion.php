@@ -22,7 +22,8 @@ class SubmittedQuestion extends Model
 
     protected $casts = [
         'is_correct' => 'boolean',
-        'score_earned' => 'integer',
+        'score_earned' => 'decimal:2',
+        'max_points' => 'decimal:2',
     ];
 
     public function submittedAssessment()

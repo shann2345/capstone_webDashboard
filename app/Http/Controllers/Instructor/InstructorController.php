@@ -855,7 +855,7 @@ class InstructorController extends Controller
         ));
     }
 
-    public function getSubmissionDetails(Request $request, $submissionId)
+    public function getSubmissionDetails(Request $request, $submission)
     {
         $instructor = Auth::user();
         
@@ -863,7 +863,7 @@ class InstructorController extends Controller
             'assessment.course',
             'student',
             'submittedQuestions.question'
-        ])->findOrFail($submissionId);
+        ])->findOrFail($submission);
         
         // Verify instructor has access to this submission
         if ($submission->assessment->course->instructor_id !== $instructor->id) {
@@ -878,9 +878,7 @@ class InstructorController extends Controller
             return $q->max_points ?? ($q->question ? $q->question->points ?? 1 : 1);
         });
         
-        $earnedPoints = $submission->submittedQuestions->sum(function($q) {
-            return $q->score_earned ?? ($q->is_correct ? ($q->question ? $q->question->points ?? 1 : 1) : 0);
-        });
+        $earnedPoints = $submission->submittedQuestions->sum('score_earned');
         
         $data = [
             'submission' => $submission,
@@ -898,6 +896,7 @@ class InstructorController extends Controller
                     'question' => $sq->question ? [
                         'id' => $sq->question->id,
                         'question_text' => $sq->question->question_text,
+                        'question_type' => $sq->question->question_type ?? 'multiple_choice',
                         'correct_answer' => $sq->question->correct_answer,
                         'points' => $sq->question->points
                     ] : null
@@ -907,17 +906,43 @@ class InstructorController extends Controller
             'raw_score' => $submission->score,
             'total_points' => $totalPoints,
             'earned_points' => $earnedPoints,
+            // Add file information for assignment submissions
+            'submitted_file' => $submission->original_filename,
+            'submitted_file_path' => $submission->submitted_file_path,
+            'file_size' => $submission->submitted_file_path ? $this->getFileSize($submission->submitted_file_path) : null,
         ];
         
         return response()->json($data);
     }
 
-    public function updateGrade(Request $request, $submissionId)
+    /**
+     * Helper method to get formatted file size
+     */
+    private function getFileSize($filePath)
+    {
+        if (!$filePath || !file_exists(storage_path('app/' . $filePath))) {
+            return null;
+        }
+        
+        $bytes = filesize(storage_path('app/' . $filePath));
+        
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2) . ' GB';
+        } elseif ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2) . ' MB';
+        } elseif ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2) . ' KB';
+        } else {
+            return $bytes . ' bytes';
+        }
+    }
+
+    public function updateGrade(Request $request, $submission)
     {
         $instructor = Auth::user();
         
         $submission = \App\Models\SubmittedAssessment::with('assessment.course')
-            ->findOrFail($submissionId);
+            ->findOrFail($submission);
         
         // Verify instructor has access to this submission
         if ($submission->assessment->course->instructor_id !== $instructor->id) {
@@ -932,10 +957,32 @@ class InstructorController extends Controller
         
         $updateData = [];
         
-        if ($request->has('score') && $request->score !== null) {
-            $updateData['score'] = $request->score;
+        // For quiz/exam type assessments, auto-calculate score from question points
+        if (in_array(strtolower($submission->assessment->type), ['quiz', 'exam'])) {
+            // Get all submitted questions and calculate total score
+            $submittedQuestions = $submission->submittedQuestions()->with('question')->get();
+            $totalPoints = 0;
+            $earnedPoints = 0;
+            
+            foreach ($submittedQuestions as $submittedQuestion) {
+                $totalPoints += $submittedQuestion->question->points;
+                if ($submittedQuestion->is_correct) {
+                    $earnedPoints += $submittedQuestion->question->points;
+                }
+            }
+            
+            // Calculate percentage score
+            $calculatedScore = $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0;
+            $updateData['score'] = $calculatedScore;
             $updateData['status'] = 'graded';
             $updateData['graded_at'] = now();
+        } else {
+            // For assignment type assessments, use manual score input
+            if ($request->has('score') && $request->score !== null) {
+                $updateData['score'] = $request->score;
+                $updateData['status'] = 'graded';
+                $updateData['graded_at'] = now();
+            }
         }
         
         if ($request->has('feedback')) {
@@ -957,14 +1004,14 @@ class InstructorController extends Controller
         ]);
     }
 
-    public function updateQuestionGrade(Request $request, $submittedQuestionId)
+    public function updateQuestionGrade(Request $request, $submittedQuestion)
     {
         $instructor = Auth::user();
         
         $submittedQuestion = \App\Models\SubmittedQuestion::with([
             'submittedAssessment.assessment.course',
             'question'
-        ])->findOrFail($submittedQuestionId);
+        ])->findOrFail($submittedQuestion);
         
         // Verify instructor has access to this submission
         if ($submittedQuestion->submittedAssessment->assessment->course->instructor_id !== $instructor->id) {
@@ -1015,12 +1062,12 @@ class InstructorController extends Controller
     }
 
 
-    public function downloadSubmission($submissionId)
+    public function downloadSubmission(Request $request, $submission)
     {
         $instructor = Auth::user();
         
         $submission = \App\Models\SubmittedAssessment::with('assessment.course')
-            ->findOrFail($submissionId);
+            ->findOrFail($submission);
         
         // Verify instructor has access to this submission
         if ($submission->assessment->course->instructor_id !== $instructor->id) {
@@ -1037,6 +1084,20 @@ class InstructorController extends Controller
             abort(404, 'File not found');
         }
         
+        // Check if this is a view request
+        if ($request->get('view')) {
+            $mimeType = mime_content_type($filePath);
+            
+            // For viewable file types, return inline response
+            if (in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'text/plain', 'text/html'])) {
+                return response()->file($filePath, [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . $submission->original_filename . '"'
+                ]);
+            }
+        }
+        
+        // Default: download the file
         return response()->download($filePath, $submission->original_filename);
     }
 
@@ -1064,5 +1125,106 @@ class InstructorController extends Controller
         
         // For assignments, activities, projects - return the stored score directly as it's usually a percentage
         return $submission->score ? round($submission->score, 1) : 0;
+    }
+    public function updateQuestionPoints(Request $request, $submittedQuestion)
+    {
+        $instructor = Auth::user();
+        
+        $submittedQuestion = \App\Models\SubmittedQuestion::with([
+            'submittedAssessment.assessment.course',
+            'question'
+        ])->findOrFail($submittedQuestion);
+        
+        // Verify instructor has access to this submission
+        if ($submittedQuestion->submittedAssessment->assessment->course->instructor_id !== $instructor->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        $request->validate([
+            'points' => 'required|numeric|min:0'
+        ]);
+        
+        $maxPoints = $submittedQuestion->max_points ?? ($submittedQuestion->question ? $submittedQuestion->question->points ?? 1 : 1);
+        $newPoints = $request->points;
+        
+        // Validate that points don't exceed maximum
+        if ($newPoints > $maxPoints) {
+            return response()->json(['error' => 'Points cannot exceed maximum points for this question'], 400);
+        }
+        
+        // Update the question points and mark as correct if points > 0
+        $submittedQuestion->update([
+            'score_earned' => $newPoints,
+            'is_correct' => $newPoints > 0
+        ]);
+        
+        // Recalculate the submission score
+        $submittedAssessment = $submittedQuestion->submittedAssessment;
+        $submittedQuestions = $submittedAssessment->submittedQuestions()->with('question')->get();
+        
+        $totalPoints = $submittedQuestions->sum(function ($q) {
+            return $q->max_points ?? ($q->question ? $q->question->points ?? 1 : 1);
+        });
+        
+        $earnedPoints = $submittedQuestions->sum('score_earned');
+        
+        $percentageScore = $totalPoints > 0 ? ($earnedPoints / $totalPoints) * 100 : 0;
+        
+        // Update the submission with new calculated score
+        $submittedAssessment->update([
+            'score' => round($percentageScore, 2),
+            'status' => 'graded',
+            'graded_at' => now()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Question points updated successfully',
+            'new_score' => round($percentageScore, 2),
+            'earned_points' => $earnedPoints,
+            'total_points' => $totalPoints
+        ]);
+    }
+
+    // Add this new function to recalculate quiz scores
+    public function recalculateSubmissionScore(Request $request, $submissionId)
+    {
+        $instructor = Auth::user();
+        
+        $submission = \App\Models\SubmittedAssessment::with([
+            'assessment.course',
+            'submittedQuestions.question'
+        ])->findOrFail($submissionId);
+        
+        // Verify instructor has access to this submission
+        if ($submission->assessment->course->instructor_id !== $instructor->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        // Recalculate the score based on current question scores
+        $submittedQuestions = $submission->submittedQuestions;
+        
+        $totalPoints = $submittedQuestions->sum(function ($q) {
+            return $q->max_points ?? ($q->question ? $q->question->points ?? 1 : 1);
+        });
+        
+        $earnedPoints = $submittedQuestions->sum('score_earned');
+        
+        $percentageScore = $totalPoints > 0 ? ($earnedPoints / $totalPoints) * 100 : 0;
+        
+        // Update the submission
+        $submission->update([
+            'score' => round($percentageScore, 2),
+            'status' => 'graded',
+            'graded_at' => now()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Score recalculated successfully',
+            'new_score' => round($percentageScore, 2),
+            'earned_points' => $earnedPoints,
+            'total_points' => $totalPoints
+        ]);
     }
 }

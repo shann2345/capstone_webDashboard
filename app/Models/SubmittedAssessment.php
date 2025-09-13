@@ -20,10 +20,11 @@ class SubmittedAssessment extends Model
         'submitted_file_path', 
         'original_filename',
         'graded_at',
+        'instructor_feedback',
     ];
 
     protected $casts = [
-        'score' => 'integer',
+        'score' => 'decimal:2',
         'submitted_at' => 'datetime',
         'started_at' => 'datetime', 
         'completed_at' => 'datetime',

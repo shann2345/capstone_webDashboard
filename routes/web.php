@@ -89,6 +89,7 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::post('/instructor/submission/{submission}/grade', [InstructorController::class, 'updateGrade'])->name('instructor.updateGrade');
     Route::get('/instructor/submission/{submission}/download', [InstructorController::class, 'downloadSubmission'])->name('instructor.downloadSubmission');
     Route::post('/instructor/submitted-question/{submittedQuestion}/grade', [InstructorController::class, 'updateQuestionGrade'])->name('instructor.updateQuestionGrade');
+    Route::post('/instructor/submitted-question/{submittedQuestion}/points', [InstructorController::class, 'updateQuestionPoints'])->name('instructor.updateQuestionPoints');
     Route::post('/instructor/assign-section/{student}', [InstructorController::class, 'assignSection'])->name('instructor.assignSection');
     Route::post('/instructor/course/{course}/section/create', [InstructorController::class, 'createSection'])->name('instructor.createSection');
     Route::post('/instructor/course/{course}/bulk-assign-section', [InstructorController::class, 'bulkAssignSection'])->name('instructor.bulkAssignSection');

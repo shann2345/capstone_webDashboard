@@ -494,7 +494,7 @@
             <div class="overflow-y-auto max-h-[calc(90vh-200px)] p-6">
                 {{-- Enhanced Four-Tab Navigation --}}
                 <div class="border-b border-gray-200 bg-gray-50 -mx-6 mb-6">
-                    <nav class="flex space-x-8 px-6">
+                    <nav class="flex space-x-8 px-6" id="modalTabNavigation">
                         <button data-tab="info" onclick="showModalTab('info')" class="border-blue-500 text-blue-600 bg-blue-50 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -640,7 +640,7 @@
                     Close
                 </button>
                 <button id="saveGradeBtn" onclick="saveGrade()" class="px-6 py-3 border border-transparent text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm">
-                    Save Grade & Feedback
+                    Save Changes
                 </button>
             </div>
         </div>
@@ -693,7 +693,6 @@
             try {
                 console.log('Opening assessment modal for:', assessment);
                 
-                // Check if modal exists
                 const modal = document.getElementById('assessmentModal');
                 if (!modal) {
                     console.error('Modal element not found!');
@@ -733,6 +732,9 @@
                 modalCurrentScore.textContent = assessment.student_score ? 
                     `${assessment.student_score}%` : 'Not graded';
 
+                // Show/hide tabs based on assessment type
+                updateTabVisibility(assessment.type);
+
                 // Show appropriate submission content based on type
                 const assignmentSubmission = document.getElementById('assignmentSubmission');
                 const quizSubmission = document.getElementById('quizSubmission');
@@ -758,9 +760,9 @@
                     loadQuizSubmission(assessment);
                 }
 
-                // Load current grades if available
+                // Load current grades if available (only for non-quiz assessments)
                 const newScoreElement = document.getElementById('newScore');
-                if (assessment.student_score && newScoreElement) {
+                if (assessment.student_score && newScoreElement && !['quiz', 'exam'].includes(assessment.type.toLowerCase())) {
                     newScoreElement.value = assessment.student_score;
                 }
 
@@ -776,6 +778,31 @@
             } catch (error) {
                 console.error('Error in openAssessmentModal:', error);
                 alert('Error opening modal: ' + error.message);
+            }
+        }
+
+        function updateTabVisibility(assessmentType) {
+            const gradingTab = document.querySelector('[data-tab="grading"]');
+            const saveBtn = document.getElementById('saveGradeBtn');
+            
+            if (['quiz', 'exam'].includes(assessmentType.toLowerCase())) {
+                // Hide grading tab for quiz/exam
+                if (gradingTab) {
+                    gradingTab.style.display = 'none';
+                }
+                // Change save button text and functionality
+                if (saveBtn) {
+                    saveBtn.textContent = 'Save Changes';
+                }
+            } else {
+                // Show grading tab for other assessments
+                if (gradingTab) {
+                    gradingTab.style.display = 'flex';
+                }
+                // Reset save button text
+                if (saveBtn) {
+                    saveBtn.textContent = 'Save Grade & Feedback';
+                }
             }
         }
 
@@ -821,23 +848,64 @@
         }
 
         function loadAssignmentSubmission(assessment) {
-            // Update file information
-            document.getElementById('fileName').textContent = assessment.submitted_file || 'No file submitted';
-            document.getElementById('fileSize').textContent = assessment.file_size || '';
-            document.getElementById('submissionDate').textContent = assessment.submitted_at ? 
-                new Date(assessment.submitted_at).toLocaleDateString() : 'Not submitted';
-            
-            // Set up download button
-            const downloadBtn = document.getElementById('downloadBtn');
-            if (assessment.submitted_file && assessment.submission_id) {
-                downloadBtn.style.display = 'block';
-                downloadBtn.onclick = function() {
-                    // Create a download link (you'd need to implement the download route)
-                    window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
-                };
-            } else {
-                downloadBtn.style.display = 'none';
+            if (!assessment.submission_id) {
+                document.getElementById('fileName').textContent = 'No file submitted';
+                document.getElementById('fileSize').textContent = '';
+                document.getElementById('submissionDate').textContent = 'Not submitted';
+                document.getElementById('downloadBtn').style.display = 'none';
+                return;
             }
+
+            // Fetch assignment submission details
+            fetch(`/instructor/submission/${assessment.submission_id}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update file information
+                    document.getElementById('fileName').textContent = data.submitted_file || 'No file submitted';
+                    document.getElementById('fileSize').textContent = data.file_size || '';
+                    document.getElementById('submissionDate').textContent = assessment.submitted_at ? 
+                        new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
+                    
+                    // Set up download and view buttons
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    if (data.submitted_file && assessment.submission_id) {
+                        downloadBtn.style.display = 'flex';
+                        downloadBtn.onclick = function() {
+                            window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
+                        };
+                        
+                        // Add view button if it doesn't exist
+                        let viewBtn = document.getElementById('viewBtn');
+                        if (!viewBtn) {
+                            viewBtn = document.createElement('button');
+                            viewBtn.id = 'viewBtn';
+                            viewBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 ml-3';
+                            viewBtn.innerHTML = `
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                <span>View</span>
+                            `;
+                            downloadBtn.parentNode.appendChild(viewBtn);
+                        }
+                        
+                        viewBtn.style.display = 'flex';
+                        viewBtn.onclick = function() {
+                            window.open(`/instructor/submission/${assessment.submission_id}/download?view=1`, '_blank');
+                        };
+                    } else {
+                        downloadBtn.style.display = 'none';
+                        const viewBtn = document.getElementById('viewBtn');
+                        if (viewBtn) viewBtn.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading assignment submission:', error);
+                    document.getElementById('fileName').textContent = 'Error loading file information';
+                    document.getElementById('fileSize').textContent = '';
+                    document.getElementById('downloadBtn').style.display = 'none';
+                });
         }
 
         function loadQuizSubmission(assessment) {
@@ -871,7 +939,7 @@
                                             Score: ${data.percentage_score}% (${data.earned_points}/${data.total_points} points)
                                         </p>
                                         <p class="text-sm text-blue-700">
-                                            Correct Answers: ${correctAnswers}/${totalQuestions}
+                                            Questions: ${totalQuestions}
                                         </p>
                                     </div>
                                 </div>
@@ -881,38 +949,61 @@
                             const statusClass = isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
                             const statusText = isCorrect ? 'Correct' : 'Incorrect';
                             const questionId = submittedQ.id;
+                            const questionType = submittedQ.question_type || 'multiple_choice';
+                            const maxPoints = submittedQ.max_points || (submittedQ.question ? submittedQ.question.points : 1);
+                            const earnedPoints = submittedQ.score_earned || 0;
                             
                             return `
                                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden" data-question-id="${questionId}">
                                     <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                                         <div class="flex items-start justify-between">
                                             <div class="flex-1">
-                                                <h4 class="text-lg font-semibold text-gray-900">Question ${index + 1}</h4>
+                                                <h4 class="text-lg font-semibold text-gray-900">Question ${index + 1} (${questionType})</h4>
                                                 <p class="text-gray-700 mt-2">${submittedQ.question_text || submittedQ.question.question_text}</p>
                                             </div>
                                             <div class="flex items-center space-x-3">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusClass}">
-                                                    ${statusText}
-                                                </span>
-                                                <div class="flex items-center space-x-2">
-                                                    <button onclick="markQuestionCorrect(${questionId}, true)" 
-                                                            class="px-3 py-1 text-xs font-medium rounded-md ${isCorrect ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-green-100'} transition-colors">
-                                                        ✓ Correct
-                                                    </button>
-                                                    <button onclick="markQuestionCorrect(${questionId}, false)" 
-                                                            class="px-3 py-1 text-xs font-medium rounded-md ${!isCorrect ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100'} transition-colors">
-                                                        ✗ Incorrect
-                                                    </button>
-                                                </div>
+                                                ${questionType.toLowerCase() === 'essay' ? `
+                                                    <div class="flex flex-col items-end space-y-2">
+                                                        <div class="flex items-center space-x-2">
+                                                            <label class="text-sm font-medium text-gray-700">Points:</label>
+                                                            <input type="number" 
+                                                                id="points_${questionId}" 
+                                                                min="0" 
+                                                                max="${maxPoints}" 
+                                                                step="0.1"
+                                                                value="${earnedPoints}"
+                                                                class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                onchange="updateQuestionPoints(${questionId}, this.value, ${maxPoints})">
+                                                            <span class="text-sm text-gray-600">/ ${maxPoints}</span>
+                                                        </div>
+                                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                                            Essay Question
+                                                        </span>
+                                                    </div>
+                                                ` : `
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusClass}">
+                                                        ${statusText}
+                                                    </span>
+                                                    <div class="flex items-center space-x-2">
+                                                        <button onclick="markQuestionCorrect(${questionId}, true)" 
+                                                                class="px-3 py-1 text-xs font-medium rounded-md ${isCorrect ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-green-100'} transition-colors">
+                                                            ✓ Correct
+                                                        </button>
+                                                        <button onclick="markQuestionCorrect(${questionId}, false)" 
+                                                                class="px-3 py-1 text-xs font-medium rounded-md ${!isCorrect ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100'} transition-colors">
+                                                            ✗ Incorrect
+                                                        </button>
+                                                    </div>
+                                                `}
                                             </div>
                                         </div>
                                     </div>
                                     <div class="p-6 space-y-4">
                                         <div class="bg-blue-50 rounded-lg p-4">
                                             <h5 class="text-sm font-semibold text-blue-900 mb-2">Student Answer:</h5>
-                                            <p class="text-blue-800">${submittedQ.submitted_answer || 'No answer provided'}</p>
+                                            <p class="text-blue-800 whitespace-pre-wrap">${submittedQ.submitted_answer || 'No answer provided'}</p>
                                         </div>
-                                        ${(submittedQ.question && submittedQ.question.correct_answer) ? `
+                                        ${(submittedQ.question && submittedQ.question.correct_answer && questionType.toLowerCase() !== 'essay') ? `
                                         <div class="bg-green-50 rounded-lg p-4">
                                             <h5 class="text-sm font-semibold text-green-900 mb-2">Correct Answer:</h5>
                                             <p class="text-green-800">${submittedQ.question.correct_answer}</p>
@@ -920,7 +1011,7 @@
                                         ` : ''}
                                         <div class="bg-gray-50 rounded-lg p-4">
                                             <h5 class="text-sm font-semibold text-gray-900 mb-2">Points:</h5>
-                                            <p class="text-gray-800">${submittedQ.score_earned || 0}/${submittedQ.max_points || (submittedQ.question ? submittedQ.question.points : 1)} points</p>
+                                            <p class="text-gray-800">${earnedPoints}/${maxPoints} points</p>
                                         </div>
                                     </div>
                                 </div>
@@ -936,6 +1027,60 @@
                 });
         }
 
+        // New function to update question points for essay questions
+        function updateQuestionPoints(questionId, points, maxPoints) {
+            if (!currentAssessment || !currentAssessment.submission_id) {
+                alert('No submission loaded');
+                return;
+            }
+
+            // Validate points
+            const pointsValue = parseFloat(points);
+            if (pointsValue < 0 || pointsValue > maxPoints) {
+                alert(`Points must be between 0 and ${maxPoints}`);
+                document.getElementById(`points_${questionId}`).value = 0;
+                return;
+            }
+
+            // Send update to server
+            fetch(`/instructor/submitted-question/${questionId}/points`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    points: pointsValue
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('Question points updated successfully');
+                    // Update the modal score display
+                    if (data.new_score !== undefined) {
+                        document.getElementById('modalCurrentScore').textContent = `${data.new_score}%`;
+                    }
+                    // Update the assessment summary
+                    const summaryScore = document.querySelector('.bg-blue-50 .text-blue-700');
+                    if (summaryScore && data.earned_points !== undefined && data.total_points !== undefined) {
+                        summaryScore.innerHTML = `Score: ${data.new_score}% (${data.earned_points}/${data.total_points} points)`;
+                    }
+                } else {
+                    console.error('Server response error:', data);
+                    alert('Error updating question points: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Network error updating question points:', error);
+                alert('Network error updating question points. Please check your connection and try again.');
+            });
+        }
 
         function saveGrade() {
             if (!currentAssessment || !currentAssessment.submission_id) {
@@ -943,11 +1088,61 @@
                 return;
             }
             
+            const assessmentType = currentAssessment.type.toLowerCase();
+            
+            // For quiz/exam assessments, we don't need manual grade input
+            if (['quiz', 'exam'].includes(assessmentType)) {
+                // Just recalculate and save the current score based on question points
+                const saveBtn = document.getElementById('saveGradeBtn');
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+                
+                fetch(`/instructor/submission/${currentAssessment.submission_id}/grade`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success || data.message) {
+                        alert('Quiz score updated successfully');
+                        closeAssessmentModal();
+                    } else {
+                        alert('Error updating quiz score: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating quiz score:', error);
+                    alert('Error updating quiz score. Please try again.');
+                })
+                .finally(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                });
+                
+                return;
+            }
+            
+            // For other assessments, use the original grading logic
             const score = document.getElementById('newScore').value;
             const feedback = document.getElementById('feedback').value;
             const returnToStudent = document.getElementById('returnToStudent').checked;
             
-            // Validate score
+            // Validate that at least a score is provided for assignment grading
+            if (!score || score.trim() === '') {
+                alert('Please provide a score for this assessment');
+                return;
+            }
+            
+            // Validate score range
             if (score && (score < 0 || score > 100)) {
                 alert('Score must be between 0 and 100');
                 return;
@@ -984,7 +1179,6 @@
                     
                     // Update the assessment table row if score was provided
                     if (score) {
-                        // Update the score in the assessment history table
                         const assessmentRows = document.querySelectorAll('#assessments-content tbody tr');
                         assessmentRows.forEach(row => {
                             const titleCell = row.querySelector('td:first-child .text-sm.font-medium');
@@ -996,7 +1190,6 @@
                             }
                         });
                         
-                        // Update the modal current score display
                         document.getElementById('modalCurrentScore').textContent = `${score}%`;
                     }
                     
@@ -1072,16 +1265,13 @@
                         summaryScore.innerHTML = `Score: ${data.new_score}% (${data.earned_points}/${data.total_points} points)`;
                     }
                 } else {
+                    console.error('Server response error:', data);
                     alert('Error updating question grade: ' + (data.error || 'Unknown error'));
-                    // Reload the quiz submission on error
-                    loadQuizSubmission(currentAssessment);
                 }
             })
             .catch(error => {
-                console.error('Error updating question grade:', error);
-                alert('Error updating question grade. Please try again.');
-                // Reload the quiz submission on error
-                loadQuizSubmission(currentAssessment);
+                console.error('Network error updating question grade:', error);
+                alert('Network error updating question grade. Please check your connection and try again.');
             });
         }
 
