@@ -76,10 +76,29 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () {
 // In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
+    Route::get('/instructor/myCourse', [InstructorController::class, 'show'])->name('instructor.myCourse');
+    Route::get('/instructor/myCourse/{course}', [InstructorController::class, 'showCourseDetails'])->name('instructor.courseDetails');
+    Route::get('/instructor/myCourse/{course}/enrollee', [InstructorController::class, 'showCourseEnrollee'])->name('instructor.courseEnrollee');
+    Route::post('/instructor/courses/{course}/add-students', [InstructorController::class, 'addStudents'])->name('instructor.addStudents');
+    Route::delete('/instructor/courses/{course}/students/{student}', [InstructorController::class, 'removeStudent'])->name('instructor.removeStudent');
+    
+    Route::get('/instructor/studentManagement', [InstructorController::class, 'showStudentManagement'])->name('instructor.studenManagement');
+    Route::get('/instructor/studentProgress', [InstructorController::class, 'showStudentProgress'])->name('instructor.studentProgress');
+    Route::get('/instructor/studentDetails/{student?}', [InstructorController::class, 'showStudentDetails'])->name('instructor.studentDetails');
+    Route::get('/instructor/submission/{submission}/details', [InstructorController::class, 'getSubmissionDetails'])->name('instructor.submissionDetails');
+    Route::post('/instructor/submission/{submission}/grade', [InstructorController::class, 'updateGrade'])->name('instructor.updateGrade');
+    Route::get('/instructor/submission/{submission}/download', [InstructorController::class, 'downloadSubmission'])->name('instructor.downloadSubmission');
+    Route::post('/instructor/submitted-question/{submittedQuestion}/grade', [InstructorController::class, 'updateQuestionGrade'])->name('instructor.updateQuestionGrade');
+    Route::post('/instructor/assign-section/{student}', [InstructorController::class, 'assignSection'])->name('instructor.assignSection');
+    Route::post('/instructor/course/{course}/section/create', [InstructorController::class, 'createSection'])->name('instructor.createSection');
+    Route::post('/instructor/course/{course}/bulk-assign-section', [InstructorController::class, 'bulkAssignSection'])->name('instructor.bulkAssignSection');
+    Route::delete('/instructor/section/{section}', [InstructorController::class, 'deleteSection'])->name('instructor.deleteSection');
 
+    
     Route::get('/course', [CourseController::class, 'create'])->name('course.create');
     Route::post('/course/createCourse', [CourseController::class, 'store'])->name('course.store');
     Route::get('/course/{course}', [CourseController::class, 'show'])->name('courses.show');
+    Route::put('/course/{course}', [CourseController::class, 'update'])->name('course.update'); 
 
     Route::post('/topics', [TopicController::class, 'store'])->name('topics.store');
     Route::patch('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');

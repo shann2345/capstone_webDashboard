@@ -18,6 +18,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'role',
         'program_id',
+        'section_id',
         'email_verification_code',
         'email_verification_code_expires_at',
         'google_id',
@@ -62,5 +63,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isEnrolledInCourse(int $courseId): bool
     {
         return $this->courses()->where('course_id', $courseId)->exists();
+    }
+    public function section()
+    {
+        return $this->belongsTo(Section::class);
+    }
+
+    public function submittedAssessments()
+    {
+        return $this->hasMany(SubmittedAssessment::class, 'student_id');
+    }
+
+    public function assessments()
+    {
+        return $this->hasManyThrough(Assessment::class, Course::class, 'instructor_id', 'course_id', 'id', 'id');
     }
 }

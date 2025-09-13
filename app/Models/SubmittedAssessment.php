@@ -19,13 +19,15 @@ class SubmittedAssessment extends Model
         'completed_at', 
         'submitted_file_path', 
         'original_filename',
+        'graded_at',
     ];
 
     protected $casts = [
         'score' => 'integer',
         'submitted_at' => 'datetime',
         'started_at' => 'datetime', 
-        'completed_at' => 'datetime', 
+        'completed_at' => 'datetime',
+        'graded_at' => 'datetime',
     ];
 
     public function student()

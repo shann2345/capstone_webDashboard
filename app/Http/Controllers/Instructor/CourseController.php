@@ -18,7 +18,7 @@ class CourseController extends Controller
 {
     public function create()
     {
-        return view('instructor.createCourse');
+        return view('instructor.course.createCourse');
     }
 
     public function store(Request $request)
@@ -62,6 +62,39 @@ class CourseController extends Controller
                                         ->get();
 
         return view('instructor.course.show', compact('course', 'topics', 'independentAssessments'));
+    }
+    public function update(Request $request, Course $course)
+    {
+        // Ensure the instructor can only update their own courses
+        if ($course->instructor_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'course_code' => 'required|string|max:50|unique:courses,course_code,' . $course->id,
+            'description' => 'nullable|string',
+            'credits' => 'nullable|integer|min:1',
+            'program_name' => 'required|string|max:255',
+            'status' => 'required|in:draft,published,archived',
+        ]);
+
+        $programName = Str::upper($request->program_name);
+
+        $program = Program::firstOrCreate(
+            ['name' => $programName]
+        );
+
+        $course->update([
+            'title' => $request->title,
+            'course_code' => $request->course_code,
+            'description' => $request->description,
+            'credits' => $request->credits,
+            'program_id' => $program->id,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'Course information updated successfully!');
     }
 
 
