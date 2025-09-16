@@ -22,6 +22,14 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verification_code',
         'email_verification_code_expires_at',
         'google_id',
+        'profile_image',
+        'phone',
+        'bio',
+        'department',
+        'title',
+        'birth_date',
+        'gender',
+        'address',
     ];
 
     protected $hidden = [
@@ -35,6 +43,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'email_verification_code_expires_at' => 'datetime',
+            'birth_date' => 'date',
         ];
     }
 

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\SocialLoginController;
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Instructor\InstructorController;
 use App\Http\Controllers\Instructor\CourseController;
 use App\Http\Controllers\Instructor\MaterialController;
@@ -73,6 +73,8 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 });
 
+
+
 // In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
@@ -93,8 +95,17 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::post('/instructor/assign-section/{student}', [InstructorController::class, 'assignSection'])->name('instructor.assignSection');
     Route::post('/instructor/course/{course}/section/create', [InstructorController::class, 'createSection'])->name('instructor.createSection');
     Route::post('/instructor/course/{course}/bulk-assign-section', [InstructorController::class, 'bulkAssignSection'])->name('instructor.bulkAssignSection');
+    Route::post('/instructor/bulk-remove-students', [InstructorController::class, 'bulkRemoveStudents'])->name('instructor.bulkRemoveStudents');
     Route::delete('/instructor/section/{section}', [InstructorController::class, 'deleteSection'])->name('instructor.deleteSection');
 
+    Route::get('/instructor/profile', [InstructorController::class, 'showProfile'])->name('instructor.showProfile');
+    Route::put('/instructor/profile', [InstructorController::class, 'updateProfile'])->name('instructor.updateProfile');
+    Route::post('/instructor/profile/upload-image', [InstructorController::class, 'uploadProfileImage'])->name('instructor.uploadProfileImage');
+    Route::delete('/instructor/profile/image', [InstructorController::class, 'deleteProfileImage'])->name('instructor.deleteProfileImage');
+    Route::post('/instructor/profile/change-password', [InstructorController::class, 'changePassword'])->name('instructor.changePassword');
+    Route::get('/instructor/notifications', [InstructorController::class, 'getNotifications'])->name('instructor.notifications');
+    Route::post('/instructor/notifications/mark-read', [InstructorController::class, 'markNotificationAsRead'])->name('instructor.markNotificationAsRead');
+    Route::post('/instructor/notifications/mark-all-read', [InstructorController::class, 'markAllNotificationsAsRead'])->name('instructor.markAllNotificationsAsRead');
     
     Route::get('/course', [CourseController::class, 'create'])->name('course.create');
     Route::post('/course/createCourse', [CourseController::class, 'store'])->name('course.store');
@@ -106,8 +117,10 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
 
     Route::get('/course/{course}/materials', [MaterialController::class, 'create'])->name('materials.create');
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
-    Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
     Route::get('/materials/{material}', [MaterialController::class, 'show'])->name('materials.show');
+    Route::get('/materials/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
+    Route::put('/materials/{material}', [MaterialController::class, 'update'])->name('materials.update');
+    Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
     Route::get('/courses/{course}/assessments/withQ/{type}', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
     Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');

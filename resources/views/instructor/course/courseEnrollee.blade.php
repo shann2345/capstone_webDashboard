@@ -30,12 +30,12 @@
         </div>
 
         <div class="mt-6 bg-white p-6 rounded-lg shadow-sm">
-            <div class="flex justify-between items-center mb-6">
+            {{-- <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-semibold text-gray-900">Section & Student Management</h2>
                     <p class="text-sm text-gray-600 mt-1">Manage sections and assign students to organize your course</p>
                 </div>
-            </div>
+            </div> --}}
 
             @if(session('success'))
                 <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
@@ -152,7 +152,6 @@
                             <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-900">CURRENT SECTION</th>
                             <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-900">INDIVIDUAL ASSIGN</th>
                             <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-900">ENROLLED ON</th>       
-                            <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
@@ -199,8 +198,7 @@
                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                     {{ $student->pivot->enrollment_date ? \Carbon\Carbon::parse($student->pivot->enrollment_date)->format('M d, Y') : 'N/A' }}
                                 </td>
-                                <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                    <a href="#" class="text-blue-600 hover:text-blue-900 mr-2">View Progress</a>
+                                <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-sm font-medium sm:pr-6">
                                     <form action="{{ route('instructor.removeStudent', [$course->id, $student->id]) }}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')

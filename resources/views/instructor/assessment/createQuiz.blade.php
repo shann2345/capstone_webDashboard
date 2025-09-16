@@ -115,37 +115,6 @@
                             </div>
                         </div>
 
-                        <div id="fileUploadSection" class="mt-6 p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload Assessment File (Optional)</h2>
-                            @isset($assessment)
-                                @if ($assessment->assessment_file_path)
-                                    <div class="mb-4">
-                                        <p class="text-gray-700 text-sm font-bold mb-2">Current File:</p>
-                                        <a href="{{ Storage::url($assessment->assessment_file_path) }}" target="_blank" class="text-blue-600 hover:underline">
-                                            {{ basename($assessment->assessment_file_path) }}
-                                        </a>
-                                        <label class="ml-4 inline-flex items-center text-sm text-red-600">
-                                            <input type="checkbox" name="clear_assessment_file" value="1" class="form-checkbox">
-                                            <span class="ml-2">Remove current file</span>
-                                        </label>
-                                    </div>
-                                @endif
-                            @endisset
-                            <div class="mb-4">
-                                <label for="assessment_file" class="block text-gray-700 text-sm font-bold mb-2">Upload New File (e.g., PDF, Word, Excel for questions/briefs):</label>
-                                <input type="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 @error('assessment_file') border-red-500 @enderror"
-                                       id="assessment_file" name="assessment_file"
-                                       accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.txt,.zip,.rar">
-                                <p class="mt-1 text-sm text-gray-500">
-                                    Supported formats: PDF, DOC, DOCX, XLSX, XLS, PPT, PPTX, TXT, ZIP, RAR (Max: 20MB).
-                                    Leave blank if you are using the online question builder below.
-                                </p>
-                                @error('assessment_file')
-                                    <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-
                         <div id="questionBuilderSection" class="mt-6 p-6 border border-blue-200 rounded-lg bg-blue-50 shadow-sm">
                             <h2 class="text-xl font-semibold text-gray-800 mb-4">Online {{ ucfirst($assessment->type ?? $assessmentType) }} Questions</h2>
                             <p class="text-sm text-gray-600 mb-4">

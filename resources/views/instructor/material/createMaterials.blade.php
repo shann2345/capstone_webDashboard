@@ -1,5 +1,8 @@
 <x-layout>
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Manage Materials for: <span class="text-blue-700">{{ $course->title }}</span></h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">
+        {{ isset($material) ? 'Edit Material for:' : 'Manage Materials for:' }} 
+        <span class="text-blue-700">{{ $course->title }}</span>
+    </h1>
     <p class="text-gray-600 mb-8">Course Code: {{ $course->course_code }}</p>
 
     {{-- Display success message --}}
@@ -16,7 +19,7 @@
         </div>
     @endif
 
-    {{-- Display validation errors (these appear after redirect on validation failure) --}}
+    {{-- Display validation errors --}}
     @if ($errors->any())
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong class="font-bold">Whoops!</strong>
@@ -29,154 +32,165 @@
         </div>
     @endif
 
-    {{-- Upload New Material Form --}}
+    {{-- Material Form --}}
     <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Upload New Material</h2>
-        <form action="{{ route('materials.store', $course->id) }}" method="POST" enctype="multipart/form-data" id="uploadMaterialForm">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4">
+            {{ isset($material) ? 'Edit Material' : 'Upload New Material' }}
+        </h2>
+        
+        <form action="{{ isset($material) ? route('materials.update', $material->id) : route('materials.store', $course->id) }}" 
+              method="POST" 
+              enctype="multipart/form-data" 
+              id="materialForm">
             @csrf
+            @if(isset($material))
+                @method('PUT')
+            @endif
 
             <input type="hidden" name="topic_id" value="{{ $topicId }}">
 
             <div class="mb-4">
                 <label for="material_title" class="block text-gray-700 text-sm font-bold mb-2">Material Title:</label>
-                <input type="text" id="material_title" name="title" value="{{ old('title') }}"
+                <input type="text" id="material_title" name="title" 
+                       value="{{ old('title', $material->title ?? '') }}"
                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
             </div>
 
             <div class="mb-4">
                 <label for="material_description" class="block text-gray-700 text-sm font-bold mb-2">Description (Optional):</label>
                 <textarea id="material_description" name="description" rows="3"
-                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ old('description') }}</textarea>
+                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ old('description', $material->description ?? '') }}</textarea>
             </div>
 
             <div class="mb-4">
-                <label for="material_file" class="block text-gray-700 text-sm font-bold mb-2">Upload File:</label>
+                <label for="material_file" class="block text-gray-700 text-sm font-bold mb-2">
+                    {{ isset($material) ? 'Upload New File (Optional - leave empty to keep current file):' : 'Upload File:' }}
+                </label>
+                
+                {{-- Show current file info if editing --}}
+                @if(isset($material) && $material->file_path)
+                    <div class="mb-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                        <strong>Current File:</strong> {{ $material->original_filename ?? 'Unknown filename' }}<br>
+                        <strong>Type:</strong> {{ strtoupper(pathinfo($material->file_path, PATHINFO_EXTENSION)) }}<br>
+                        @if(Storage::disk('public')->exists($material->file_path))
+                            <strong>Size:</strong> {{ round(Storage::disk('public')->size($material->file_path) / 1024 / 1024, 2) }} MB
+                        @endif
+                    </div>
+                @endif
+                
                 <input type="file" id="material_file" name="material_file"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required
-                       accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.java,.js,.py,.php,.html,.css,.json,.xml,.mp4,.mov,.avi,.webm,.ogg,.mp3,.wav,.aac,.flac,.jpg,.jpeg,.png,.gif,.svg,.webp,.zip,.rar,.7z,.tar,.gz"> {{-- UPDATED: Added accept attribute --}}
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                       {{ isset($material) ? '' : 'required' }}
+                       accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.java,.js,.py,.php,.html,.css,.json,.xml,.cpp,.c,.h,.hpp,.cs,.rb,.go,.swift,.kt,.scala,.r,.sql,.sh,.bat,.ps1,.yml,.yaml,.toml,.ini,.cfg,.conf,.md,.rst,.tex,.mp4,.mov,.avi,.webm,.ogg,.mkv,.flv,.wmv,.m4v,.3gp,.mpg,.mpeg,.mp3,.wav,.aac,.flac,.m4a,.wma,.opus,.aiff,.au,.jpg,.jpeg,.png,.gif,.svg,.webp,.bmp,.tiff,.tif,.ico,.heic,.heif,.zip,.rar,.7z,.tar,.gz,.bz2,.xz,.lzma,.cab,.iso,.apk,.exe,.msi,.deb,.rpm,.dmg,.pkg,.bin,.jar,.war,.ear">
                 <p class="mt-1 text-sm text-gray-500">
-                    {{-- UPDATED: Informational text --}}
-                    Supported files:<br> Documents (PDF, Word, PPT, TXT)<br> Code (Java, JS, Python, PHP, HTML, CSS, JSON, XML)<br>
-                    Videos (MP4, MOV, AVI, WebM, Ogg)<br> Audio (MP3, WAV, Ogg, AAC, FLAC) <br>Images (JPG, PNG, GIF, SVG, WebP)<br>
-                    Archives (ZIP, RAR, 7Z, TAR, GZ). Max 20MB.
+                    <strong>Supported files (Max 100MB):</strong><br>
+                    <span class="text-xs">
+                        📄 <strong>Documents:</strong> PDF, Word, PPT, Excel, TXT, RTF, ODT, CSV<br>
+                        💻 <strong>Code Files:</strong> Java, JS, Python, PHP, HTML, CSS, JSON, XML, C++, C#, Ruby, Go, Swift, Kotlin, R, SQL, Shell, YAML, Markdown<br>
+                        🎥 <strong>Videos:</strong> MP4, MOV, AVI, WebM, MKV, FLV, WMV, MPEG<br>
+                        🎵 <strong>Audio:</strong> MP3, WAV, AAC, FLAC, M4A, WMA, OPUS<br>
+                        🖼️ <strong>Images:</strong> JPG, PNG, GIF, SVG, WebP, BMP, TIFF, HEIC<br>
+                        📦 <strong>Archives:</strong> ZIP, RAR, 7Z, TAR, GZ, ISO<br>
+                        ⚙️ <strong>Executables:</strong> APK, EXE, MSI, DEB, RPM, DMG, JAR
+                    </span>
                 </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                     <label for="available_at" class="block text-gray-700 text-sm font-bold mb-2">Available From (Optional Date/Time):</label>
-                    <input type="datetime-local" id="available_at" name="available_at" value="{{ old('available_at') }}"
+                    <input type="datetime-local" id="available_at" name="available_at" 
+                           value="{{ old('available_at', isset($material) && $material->available_at ? $material->available_at->setTimezone('Asia/Manila')->format('Y-m-d\TH:i') : '') }}"
                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                 </div>
                 <div>
                     <label for="unavailable_at" class="block text-gray-700 text-sm font-bold mb-2">Available Until (Optional Date/Time):</label>
-                    <input type="datetime-local" id="unavailable_at" name="unavailable_at" value="{{ old('unavailable_at') }}"
+                    <input type="datetime-local" id="unavailable_at" name="unavailable_at" 
+                           value="{{ old('unavailable_at', isset($material) && $material->unavailable_at ? $material->unavailable_at->setTimezone('Asia/Manila')->format('Y-m-d\TH:i') : '') }}"
                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                 </div>
             </div>
 
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-between">
+                <a href="{{ isset($material) ? route('materials.show', $material->id) : route('courses.show', $course->id) }}" 
+                   class="inline-block align-baseline font-bold text-sm text-gray-500 hover:text-gray-800">
+                    {{ isset($material) ? 'Cancel' : 'Back to Course Details' }}
+                </a>
                 <button type="submit"
                         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                         id="submitMaterialButton">
-                    Upload Material
+                    {{ isset($material) ? 'Update Material' : 'Upload Material' }}
                 </button>
             </div>
         </form>
     </div>
 
-    {{-- The commented out "List Existing Materials" section remains commented as per your previous input --}}
-    {{-- <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Materials</h2>
-        @if ($materials->isEmpty())
-            <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative text-center" role="alert">
-                <span class="block sm:inline">No materials have been uploaded for this course yet.</span>
-            </div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Availability</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach ($materials as $material)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $material->title }}</div>
-                                    @if($material->description)
-                                        <div class="text-sm text-gray-500">{{ Str::limit($material->description, 50) }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                        {{ ucfirst($material->material_type) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    @if($material->available_at || $material->unavailable_at)
-                                        @if($material->isAvailable())
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Available</span>
-                                        @else
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Scheduled</span>
-                                        @endif
-                                        @if($material->available_at)
-                                            <div class="text-xs text-gray-400">From: {{ $material->available_at->format('M d, Y H:i A') }}</div>
-                                        @endif
-                                        @if($material->unavailable_at)
-                                            <div class="text-xs text-gray-400">Until: {{ $material->unavailable_at->format('M d, Y H:i A') }}</div>
-                                        @endif
-                                    @else
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Always Available</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $material->created_at->format('M d, Y') }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    @if($material->file_path)
-                                        <a href="{{ route('materials.download', $material->id) }}" class="text-blue-600 hover:text-blue-900 mr-4">Download</a>
-                                    @endif
-
-                                    <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
-                                    <a href="#" class="text-red-600 hover:text-red-900 ml-4">Delete</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </div> --}}
-
-    <div class="flex justify-end mt-6">
-        <a href="{{ route('courses.show', $course->id) }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
-            Back to Course Details
-        </a>
-    </div>
-
-    {{-- !!! BEGIN: Upload Progress Modal !!! --}}
+    {{-- Upload Progress Modal --}}
     <div id="uploadProgressModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Uploading Material...</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                {{ isset($material) ? 'Updating Material...' : 'Uploading Material...' }}
+            </h3>
             <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
                 <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
             </div>
             <p id="progressText" class="text-sm text-gray-600 text-center">0% Complete</p>
         </div>
     </div>
-    {{-- !!! END: Upload Progress Modal !!! --}}
 
     <script>
-        document.getElementById('uploadMaterialForm').addEventListener('submit', function(event) {
+        // File size validation
+        document.getElementById('material_file').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+                if (file.size > maxSize) {
+                    alert('File size exceeds 100MB limit. Please choose a smaller file.');
+                    event.target.value = ''; // Clear the file input
+                    return;
+                }
+                
+                // Show file info
+                const fileInfo = document.getElementById('fileInfo');
+                if (fileInfo) {
+                    fileInfo.remove();
+                }
+                
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                const infoDiv = document.createElement('div');
+                infoDiv.id = 'fileInfo';
+                infoDiv.className = 'mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm';
+                infoDiv.innerHTML = `
+                    <strong>Selected:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${fileSizeMB} MB<br>
+                    <strong>Type:</strong> ${file.type || 'Unknown'}
+                `;
+                event.target.parentNode.appendChild(infoDiv);
+            }
+        });
+
+        document.getElementById('materialForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent default form submission
 
             const form = event.target;
+            const fileInput = document.getElementById('material_file');
+            const file = fileInput.files[0];
+            const isEdit = {{ isset($material) ? 'true' : 'false' }};
+            
+            // Additional client-side validation for new uploads
+            if (!isEdit && !file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+            
+            if (file) {
+                const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+                if (file.size > maxSize) {
+                    alert('File size exceeds 100MB limit. Please choose a smaller file.');
+                    return;
+                }
+            }
+
             const submitButton = document.getElementById('submitMaterialButton');
             const modal = document.getElementById('uploadProgressModal');
             const progressBar = document.getElementById('progressBar');
@@ -184,7 +198,7 @@
 
             // Disable the submit button and show the modal
             submitButton.setAttribute('disabled', 'disabled');
-            submitButton.innerText = 'Uploading...';
+            submitButton.innerText = isEdit ? 'Updating...' : 'Uploading...';
             modal.classList.remove('hidden'); // Show the modal
 
             // Reset progress bar
@@ -210,14 +224,14 @@
             xhr.onload = function() {
                 modal.classList.add('hidden'); // Hide modal on completion
                 submitButton.removeAttribute('disabled');
-                submitButton.innerText = 'Upload Material';
+                submitButton.innerText = isEdit ? 'Update Material' : 'Upload Material';
 
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    // Success: Redirect to the materials index page (which refreshes the list)
+                    // Success: Redirect to the response URL
                     window.location.href = xhr.responseURL;
                 } else {
                     // Error: Handle validation errors or server errors
-                    let errorMessage = 'An error occurred during upload.';
+                    let errorMessage = 'An error occurred during ' + (isEdit ? 'update' : 'upload') + '.';
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response.message) {
@@ -228,7 +242,7 @@
                     }
                     alert(errorMessage + ' Please check your input and try again.');
 
-                    if (xhr.status === 422 || xhr.status === 302) { // 422 for validation, 302 for redirect
+                    if (xhr.status === 422 || xhr.status === 302) {
                         window.location.href = xhr.responseURL || window.location.href;
                     }
                 }
@@ -238,7 +252,7 @@
             xhr.onerror = function() {
                 modal.classList.add('hidden'); // Hide modal on error
                 submitButton.removeAttribute('disabled');
-                submitButton.innerText = 'Upload Material';
+                submitButton.innerText = isEdit ? 'Update Material' : 'Upload Material';
                 alert('Network error or server unreachable. Please try again.');
             };
 

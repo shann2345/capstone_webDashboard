@@ -23,14 +23,6 @@
                             </svg>
                             Back to Progress Overview
                         </a>
-                        @if($selectedStudent)
-                            <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                </svg>
-                                Send Message
-                            </button>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -287,25 +279,149 @@
                                                 @php
                                                     $studentEnrollment = $course->students->where('id', $selectedStudent->id)->first();
                                                     $courseGrade = $studentEnrollment && $studentEnrollment->pivot->grade ? (float) $studentEnrollment->pivot->grade : 0;
+                                                    
+                                                    // Calculate assessment completion for this course
+                                                    $totalAssessments = $course->assessments->count();
+                                                    $completedAssessments = 0;
+                                                    $averageScore = 0;
+                                                    $hasScores = false;
+                                                    
+                                                    if ($totalAssessments > 0) {
+                                                        // Get completed assessments for this student in this course
+                                                        $courseAssessmentIds = $course->assessments->pluck('id');
+                                                        $completedSubmissions = \App\Models\SubmittedAssessment::where('student_id', $selectedStudent->id)
+                                                            ->whereIn('assessment_id', $courseAssessmentIds)
+                                                            ->whereIn('status', ['completed', 'graded', 'submitted'])
+                                                            ->with('assessment')
+                                                            ->get();
+                                                        
+                                                        $completedAssessments = $completedSubmissions->count();
+                                                        
+                                                        // Calculate average score from actual submissions
+                                                        if ($completedSubmissions->isNotEmpty()) {
+                                                            $submissionScores = [];
+                                                            foreach ($completedSubmissions as $submission) {
+                                                                if ($submission->score !== null) {
+                                                                    $assessment = $submission->assessment;
+                                                                    if ($assessment) {
+                                                                        // Use the same calculation method from the controller
+                                                                        $assessmentType = strtolower(trim($assessment->type));
+                                                                        
+                                                                        if (in_array($assessmentType, ['quiz', 'exam'])) {
+                                                                            // For quiz/exam: calculate percentage based on question points
+                                                                            $submittedQuestions = $submission->submittedQuestions ?? collect();
+                                                                            if ($submittedQuestions->count() > 0) {
+                                                                                $totalMaxPoints = $submittedQuestions->sum('max_points');
+                                                                                $totalEarnedPoints = $submittedQuestions->sum('score_earned');
+                                                                                if ($totalMaxPoints > 0) {
+                                                                                    $calculatedScore = ($totalEarnedPoints / $totalMaxPoints) * 100;
+                                                                                    $submissionScores[] = $calculatedScore;
+                                                                                }
+                                                                            } else {
+                                                                                $submissionScores[] = $submission->score;
+                                                                            }
+                                                                        } else {
+                                                                            // For assignments: use direct score
+                                                                            $submissionScores[] = $submission->score;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            if (!empty($submissionScores)) {
+                                                                $averageScore = array_sum($submissionScores) / count($submissionScores);
+                                                                $hasScores = true;
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    // Determine completion percentage
+                                                    $completionPercentage = $totalAssessments > 0 ? ($completedAssessments / $totalAssessments) * 100 : 0;
+                                                    
+                                                    // Determine display score - prefer calculated average over enrollment grade
+                                                    $displayScore = $hasScores ? $averageScore : $courseGrade;
+                                                    $progressColor = $displayScore >= 85 ? 'bg-green-500' : ($displayScore >= 75 ? 'bg-yellow-500' : ($displayScore >= 60 ? 'bg-orange-500' : 'bg-red-500'));
+                                                    
+                                                    // Determine status
+                                                    $isCompleted = $completionPercentage >= 100;
+                                                    $statusText = $isCompleted ? 'Completed' : 'In Progress';
+                                                    $statusColor = $isCompleted ? 'text-green-600' : 'text-blue-600';
                                                 @endphp
-                                                <div class="border border-gray-200 rounded-lg p-4">
-                                                    <div class="flex justify-between items-start mb-2">
-                                                        <div>
+                                                <div class="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                                                    <div class="flex justify-between items-start mb-3">
+                                                        <div class="flex-1">
                                                             <h5 class="font-medium text-gray-900">{{ $course->title }}</h5>
                                                             <p class="text-sm text-gray-500">{{ $course->course_code }}</p>
+                                                            <div class="flex items-center space-x-4 mt-1">
+                                                                <span class="text-xs {{ $statusColor }} font-medium">{{ $statusText }}</span>
+                                                                @if($totalAssessments > 0)
+                                                                    <span class="text-xs text-gray-500">
+                                                                        {{ $completedAssessments }}/{{ $totalAssessments }} assessments
+                                                                    </span>
+                                                                @endif
+                                                            </div>
                                                         </div>
-                                                        <span class="text-lg font-bold text-gray-900">{{ $courseGrade }}%</span>
-                                                    </div>
-                                                    <div class="mt-3">
-                                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                                            @php
-                                                                $gradeColor = $courseGrade >= 85 ? 'bg-green-500' : ($courseGrade >= 75 ? 'bg-yellow-500' : 'bg-red-500');
-                                                            @endphp
-                                                            <div class="{{ $gradeColor }} h-2 rounded-full" style="width: {{ $courseGrade }}%"></div>
+                                                        <div class="text-right">
+                                                            <span class="text-xl font-bold text-gray-900">{{ number_format($displayScore, 1) }}%</span>
+                                                            <div class="text-xs text-gray-500 mt-1">
+                                                                @if($hasScores)
+                                                                    Average Score
+                                                                @else
+                                                                    Course Grade
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div class="mt-2 text-xs text-gray-500">
-                                                        {{ $course->assessments->count() }} assessments available
+                                                    
+                                                    {{-- Progress Bars --}}
+                                                    <div class="space-y-3">
+                                                        {{-- Assessment Completion Bar --}}
+                                                        <div>
+                                                            <div class="flex justify-between items-center mb-1">
+                                                                <span class="text-xs font-medium text-gray-700">Assessment Completion</span>
+                                                                <span class="text-xs text-gray-600">{{ number_format($completionPercentage, 1) }}%</span>
+                                                            </div>
+                                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                                <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ $completionPercentage }}%"></div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {{-- Grade/Score Bar --}}
+                                                        @if($displayScore > 0)
+                                                        <div>
+                                                            <div class="flex justify-between items-center mb-1">
+                                                                <span class="text-xs font-medium text-gray-700">
+                                                                    @if($hasScores)
+                                                                        Performance Score
+                                                                    @else
+                                                                        Course Grade
+                                                                    @endif
+                                                                </span>
+                                                                <span class="text-xs text-gray-600">{{ number_format($displayScore, 1) }}%</span>
+                                                            </div>
+                                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                                <div class="{{ $progressColor }} h-2 rounded-full transition-all duration-300" style="width: {{ $displayScore }}%"></div>
+                                                            </div>
+                                                        </div>
+                                                        @endif
+                                                    </div>
+                                                    
+                                                    {{-- Additional Info --}}
+                                                    <div class="mt-3 pt-3 border-t border-gray-100">
+                                                        <div class="flex justify-between items-center text-xs text-gray-500">
+                                                            <span>
+                                                                @if($isCompleted)
+                                                                    Course completed with {{ $completedAssessments }} assessments
+                                                                @else
+                                                                    {{ $totalAssessments - $completedAssessments }} assessments remaining
+                                                                @endif
+                                                            </span>
+                                                            @if($hasScores && $courseGrade > 0 && abs($displayScore - $courseGrade) > 1)
+                                                                <span class="text-gray-400" title="Enrollment Grade: {{ $courseGrade }}%">
+                                                                    Enrolled: {{ number_format($courseGrade, 1) }}%
+                                                                </span>
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @endforeach
@@ -848,65 +964,66 @@
         }
 
         function loadAssignmentSubmission(assessment) {
-            if (!assessment.submission_id) {
-                document.getElementById('fileName').textContent = 'No file submitted';
-                document.getElementById('fileSize').textContent = '';
-                document.getElementById('submissionDate').textContent = 'Not submitted';
-                document.getElementById('downloadBtn').style.display = 'none';
-                return;
-            }
+    if (!assessment.submission_id) {
+        document.getElementById('fileName').textContent = 'No file submitted';
+        document.getElementById('fileSize').textContent = '';
+        document.getElementById('submissionDate').textContent = 'Not submitted';
+        document.getElementById('downloadBtn').style.display = 'none';
+        return;
+    }
 
-            // Fetch assignment submission details
-            fetch(`/instructor/submission/${assessment.submission_id}/details`)
-                .then(response => response.json())
-                .then(data => {
-                    // Update file information
-                    document.getElementById('fileName').textContent = data.submitted_file || 'No file submitted';
-                    document.getElementById('fileSize').textContent = data.file_size || '';
-                    document.getElementById('submissionDate').textContent = assessment.submitted_at ? 
-                        new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
-                    
-                    // Set up download and view buttons
-                    const downloadBtn = document.getElementById('downloadBtn');
-                    if (data.submitted_file && assessment.submission_id) {
-                        downloadBtn.style.display = 'flex';
-                        downloadBtn.onclick = function() {
-                            window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
-                        };
-                        
-                        // Add view button if it doesn't exist
-                        let viewBtn = document.getElementById('viewBtn');
-                        if (!viewBtn) {
-                            viewBtn = document.createElement('button');
-                            viewBtn.id = 'viewBtn';
-                            viewBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 ml-3';
-                            viewBtn.innerHTML = `
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                <span>View</span>
-                            `;
-                            downloadBtn.parentNode.appendChild(viewBtn);
-                        }
-                        
-                        viewBtn.style.display = 'flex';
-                        viewBtn.onclick = function() {
-                            window.open(`/instructor/submission/${assessment.submission_id}/download?view=1`, '_blank');
-                        };
-                    } else {
-                        downloadBtn.style.display = 'none';
-                        const viewBtn = document.getElementById('viewBtn');
-                        if (viewBtn) viewBtn.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading assignment submission:', error);
-                    document.getElementById('fileName').textContent = 'Error loading file information';
-                    document.getElementById('fileSize').textContent = '';
-                    document.getElementById('downloadBtn').style.display = 'none';
-                });
-        }
+    // Fetch assignment submission details
+    fetch(`/instructor/submission/${assessment.submission_id}/details`)
+        .then(response => response.json())
+        .then(data => {
+            // Update file information
+            document.getElementById('fileName').textContent = data.submitted_file || 'No file submitted';
+            document.getElementById('fileSize').textContent = data.file_size || '';
+            document.getElementById('submissionDate').textContent = assessment.submitted_at ? 
+                new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
+            
+            // Set up download button
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (data.submitted_file && assessment.submission_id) {
+                downloadBtn.style.display = 'flex';
+                downloadBtn.onclick = function() {
+                    // Use direct URL construction instead of Laravel route helper
+                    window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
+                };
+                
+                // Add view button functionality
+                let viewBtn = document.getElementById('viewBtn');
+                if (!viewBtn) {
+                    viewBtn = document.createElement('button');
+                    viewBtn.id = 'viewBtn';
+                    viewBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 ml-3';
+                    viewBtn.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        <span>View</span>
+                    `;
+                    downloadBtn.parentNode.appendChild(viewBtn);
+                }
+                
+                viewBtn.style.display = 'flex';
+                viewBtn.onclick = function() {
+                    window.open(`/instructor/submission/${assessment.submission_id}/download?view=1`, '_blank');
+                };
+            } else {
+                downloadBtn.style.display = 'none';
+                const viewBtn = document.getElementById('viewBtn');
+                if (viewBtn) viewBtn.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading assignment submission:', error);
+            document.getElementById('fileName').textContent = 'Error loading file information';
+            document.getElementById('fileSize').textContent = '';
+            document.getElementById('downloadBtn').style.display = 'none';
+        });
+}
 
         function loadQuizSubmission(assessment) {
             const questionsContainer = document.getElementById('quizQuestions');

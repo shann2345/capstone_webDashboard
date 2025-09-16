@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Models\Material; 
 use App\Models\Course;
@@ -50,6 +52,32 @@ class InstructorController extends Controller
             ->count();
         // --- End of updated section ---
 
+        // --- NEW: Calculate pending grading stats ---
+        $assessmentIds = \App\Models\Assessment::whereIn('course_id', $courseIds)->pluck('id');
+        
+        // Get all submitted assessments that need grading (status not 'graded')
+        $pendingSubmissions = \App\Models\SubmittedAssessment::whereIn('assessment_id', $assessmentIds)
+            ->whereIn('status', ['submitted', 'completed']) // Only count submissions that are not yet graded
+            ->with(['assessment', 'student'])
+            ->get();
+
+        $pendingGrading = $pendingSubmissions->count();
+
+        // Count urgent submissions (due today or overdue based on assessment unavailable_at date)
+        $urgentSubmissions = $pendingSubmissions->filter(function ($submission) {
+            $assessment = $submission->assessment;
+            if (!$assessment->unavailable_at) {
+                return false;
+            }
+            
+            $dueDate = Carbon::parse($assessment->unavailable_at);
+            $now = Carbon::now();
+            
+            // Consider urgent if due today or already past due
+            return $dueDate->lte($now->endOfDay());
+        })->count();
+        // --- End of pending grading calculation ---
+
         $startOfWeek = Carbon::now()->startOfWeek();
         $endOfWeek = Carbon::now()->endOfWeek();
         $today = Carbon::today();
@@ -77,7 +105,7 @@ class InstructorController extends Controller
         $classesThisWeek = $allDates->count();
 
         return view('instructor.dashboard', compact(
-            'instructor', 'courses', 'totalStudents', 'upcomingAssessments', 'classesThisWeek', 'classesToday', 'videoCount', 'documentCount', 'otherFileCount'
+            'instructor', 'courses', 'totalStudents', 'upcomingAssessments', 'classesThisWeek', 'classesToday', 'videoCount', 'documentCount', 'otherFileCount', 'pendingGrading', 'urgentSubmissions'
         ));
     }
 
@@ -211,22 +239,106 @@ class InstructorController extends Controller
         });
         
         // Convert to paginated collection for easier handling
-        $students = $studentsQuery->values(); // Reset keys for proper indexing
+        $allStudents = $studentsQuery->values(); // Reset keys for proper indexing
+        
+        // Implement manual pagination
+        $perPage = 10;
+        $currentPage = $request->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        
+        $students = $allStudents->slice($offset, $perPage);
+        $totalStudents = $allStudents->count();
+        
+        // Create pagination data
+        $pagination = [
+            'current_page' => $currentPage,
+            'per_page' => $perPage,
+            'total' => $totalStudents,
+            'last_page' => ceil($totalStudents / $perPage),
+            'from' => $offset + 1,
+            'to' => min($offset + $perPage, $totalStudents),
+            'has_pages' => $totalStudents > $perPage,
+            'has_more_pages' => $currentPage < ceil($totalStudents / $perPage),
+            'prev_page_url' => $currentPage > 1 ? $request->fullUrlWithQuery(['page' => $currentPage - 1]) : null,
+            'next_page_url' => $currentPage < ceil($totalStudents / $perPage) ? $request->fullUrlWithQuery(['page' => $currentPage + 1]) : null,
+        ];
         
         return view('instructor.student.studentManagementDetails', compact(
             'courses',
             'sections', 
             'students',
+            'allStudents', // For total count calculations
             'totalStudents',
             'studentsWithoutSections',
             'recentEnrollments',
             'selectedCourseId',
             'selectedSectionId',
             'searchTerm',
-            'sortBy'
+            'sortBy',
+            'pagination'
         ));
     }
 
+    public function showProfile() {
+        return view('instructor.profile');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'title' => 'nullable|string|max:100',
+            'department' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:20',
+            'birth_date' => 'nullable|date|before:today',
+            'gender' => 'nullable|in:Male,Female,Other,Prefer not to say',
+            'bio' => 'nullable|string|max:1000',
+            'address' => 'nullable|string|max:500',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'title' => $request->title,
+            'department' => $request->department,
+            'phone' => $request->phone,
+            'birth_date' => $request->birth_date,
+            'gender' => $request->gender,
+            'bio' => $request->bio,
+            'address' => $request->address,
+        ]);
+
+        return redirect()->route('instructor.showProfile')
+            ->with('success', 'Profile updated successfully!');
+    }
+
+    public function uploadProfileImage(Request $request)
+    {
+        $request->validate([
+            'profile_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240',
+        ]);
+
+        $user = Auth::user();
+
+        // Delete old profile image if exists
+        if ($user->profile_image) {
+            Storage::disk('public')->delete($user->profile_image);
+        }
+
+        // Store new profile image
+        $imagePath = $request->file('profile_image')->store('profile_images', 'public');
+
+        $user->update([
+            'profile_image' => $imagePath,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile image updated successfully!',
+            'image_url' => asset('storage/' . $imagePath)
+        ]);
+    }
     public function assignSection(Request $request, $studentId)
     {
         $request->validate([
@@ -297,6 +409,39 @@ class InstructorController extends Controller
         
         return redirect()->back()->with('success', 'Section deleted successfully. Students have been moved to no section.');
     }
+
+    public function bulkRemoveStudents(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:users,id',
+            'course_id' => 'required|exists:courses,id'
+        ]);
+
+        $instructor = Auth::user();
+        $course = Course::findOrFail($request->course_id);
+        
+        // Verify that the instructor owns this course
+        if ($course->instructor_id !== $instructor->id) {
+            return redirect()->back()->with('error', 'Unauthorized access to this course.');
+        }
+
+        $studentIds = $request->student_ids;
+        $removedCount = 0;
+
+        try {
+            // Remove students from the course
+            foreach ($studentIds as $studentId) {
+                $course->students()->detach($studentId);
+                $removedCount++;
+            }
+            
+            return redirect()->back()->with('success', "Successfully removed {$removedCount} student(s) from all courses.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error removing students. Please try again.');
+        }
+    }
+
     public function addStudents(Request $request, $courseId)
     {
         $request->validate([
@@ -504,15 +649,11 @@ class InstructorController extends Controller
         // Get course performance data for charts
         $coursePerformanceData = $this->getCoursePerformanceData($courses);
 
-        // Get recent activity data
-        $recentActivities = $this->getRecentActivities($courses, $dateRange);
-
         return view('instructor.student.studentProgress', compact(
             'courses',
             'studentsWithProgress',
             'overallStats',
             'coursePerformanceData',
-            'recentActivities',
             'selectedCourseId',
             'selectedPeriod',
             'selectedStatus'
@@ -680,27 +821,49 @@ class InstructorController extends Controller
 
     private function getRecentActivities($courses, $dateRange)
     {
-        // Get actual activity data including submissions
+        // Get actual activity data - focus only on student activities
         $activities = collect();
 
         $courseIds = $courses->pluck('id');
 
-        foreach ($courses as $course) {
-            // Add recent assessments
-            $recentAssessments = $course->assessments()
-                ->whereBetween('created_at', [$dateRange['startDate'], $dateRange['endDate']])
-                ->get();
+        // Add recent assessment submissions (main notification type)
+        $recentSubmissions = \App\Models\SubmittedAssessment::with(['student', 'assessment.course'])
+            ->whereHas('assessment', function ($query) use ($courseIds) {
+                $query->whereIn('course_id', $courseIds);
+            })
+            ->whereBetween('submitted_at', [$dateRange['startDate'], $dateRange['endDate']])
+            ->whereIn('status', ['completed', 'graded', 'submitted'])
+            ->orderBy('submitted_at', 'desc')
+            ->get();
 
-            foreach ($recentAssessments as $assessment) {
-                $activities->push([
-                    'type' => 'assessment_created',
-                    'description' => "Assessment '{$assessment->title}' created in {$course->title}",
-                    'date' => $assessment->created_at,
-                    'course' => $course->title,
-                ]);
+        foreach ($recentSubmissions as $submission) {
+            // Get submission status for better context
+            $statusText = '';
+            switch($submission->status) {
+                case 'submitted':
+                    $statusText = ' (Needs Review)';
+                    break;
+                case 'completed':
+                    $statusText = ' (Pending Grading)';
+                    break;
+                case 'graded':
+                    $statusText = ' (Graded)';
+                    break;
             }
+            
+            $activities->push([
+                'type' => 'assessment_submitted',
+                'description' => "{$submission->student->name} submitted '{$submission->assessment->title}'{$statusText}",
+                'date' => $submission->submitted_at,
+                'course' => $submission->assessment->course->title,
+                'student_id' => $submission->student->id,
+                'submission_id' => $submission->id,
+                'status' => $submission->status,
+            ]);
+        }
 
-            // Add recent enrollments
+        // Add recent enrollments (still useful for instructors to know)
+        foreach ($courses as $course) {
             $recentEnrollments = $course->students()
                 ->wherePivotBetween('enrollment_date', [$dateRange['startDate'], $dateRange['endDate']])
                 ->get();
@@ -708,32 +871,73 @@ class InstructorController extends Controller
             foreach ($recentEnrollments as $student) {
                 $activities->push([
                     'type' => 'student_enrolled',
-                    'description' => "{$student->name} enrolled in {$course->title}",
+                    'description' => "New student {$student->name} enrolled in {$course->title}",
                     'date' => $student->pivot->enrollment_date,
                     'course' => $course->title,
+                    'student_id' => $student->id,
                 ]);
             }
         }
 
-        // Add recent assessment submissions
-        $recentSubmissions = \App\Models\SubmittedAssessment::with(['student', 'assessment.course'])
-            ->whereHas('assessment', function ($query) use ($courseIds) {
-                $query->whereIn('course_id', $courseIds);
-            })
-            ->whereBetween('submitted_at', [$dateRange['startDate'], $dateRange['endDate']])
-            ->whereIn('status', ['completed', 'graded', 'submitted'])
-            ->get();
+        return $activities->sortByDesc('date')->take(15);
+    }
 
-        foreach ($recentSubmissions as $submission) {
-            $activities->push([
-                'type' => 'assessment_submitted',
-                'description' => "{$submission->student->name} submitted '{$submission->assessment->title}' in {$submission->assessment->course->title}",
-                'date' => $submission->submitted_at,
-                'course' => $submission->assessment->course->title,
-            ]);
+    public function getNotifications()
+    {
+        $instructor = Auth::user();
+        
+        // Get all courses taught by this instructor
+        $courses = $instructor->taughtCourses()->get();
+        
+        // Get activities from the last 30 days for notifications
+        $dateRange = [
+            'startDate' => Carbon::now()->subDays(30),
+            'endDate' => Carbon::now()
+        ];
+        
+        $activities = $this->getRecentActivities($courses, $dateRange);
+        
+        // Get read notifications from session
+        $readNotifications = session('read_notifications', []);
+        
+        // Add read status to each activity
+        $notifications = $activities->map(function ($activity) use ($readNotifications) {
+            $notificationId = md5($activity['type'] . $activity['description'] . $activity['date']);
+            $activity['id'] = $notificationId;
+            $activity['read'] = in_array($notificationId, $readNotifications);
+            return $activity;
+        });
+        
+        $unreadCount = $notifications->where('read', false)->count();
+        
+        return response()->json([
+            'notifications' => $notifications->values(),
+            'unread_count' => $unreadCount
+        ]);
+    }
+
+    public function markNotificationAsRead(Request $request)
+    {
+        $notificationId = $request->input('notification_id');
+        $readNotifications = session('read_notifications', []);
+        
+        if (!in_array($notificationId, $readNotifications)) {
+            $readNotifications[] = $notificationId;
+            session(['read_notifications' => $readNotifications]);
         }
+        
+        return response()->json(['success' => true]);
+    }
 
-        return $activities->sortByDesc('date')->take(10);
+    public function markAllNotificationsAsRead(Request $request)
+    {
+        $notificationIds = $request->input('notification_ids', []);
+        $readNotifications = session('read_notifications', []);
+        
+        $readNotifications = array_unique(array_merge($readNotifications, $notificationIds));
+        session(['read_notifications' => $readNotifications]);
+        
+        return response()->json(['success' => true]);
     }
 
     public function showStudentDetails(Request $request, $studentId = null)
@@ -915,9 +1119,6 @@ class InstructorController extends Controller
         return response()->json($data);
     }
 
-    /**
-     * Helper method to get formatted file size
-     */
     private function getFileSize($filePath)
     {
         if (!$filePath || !file_exists(storage_path('app/' . $filePath))) {
@@ -1078,10 +1279,17 @@ class InstructorController extends Controller
             abort(404, 'No file found for this submission');
         }
         
+        // Check both storage paths
         $filePath = storage_path('app/' . $submission->submitted_file_path);
         
+        // If file doesn't exist in storage/app, try storage/app/public
         if (!file_exists($filePath)) {
-            abort(404, 'File not found');
+            $filePath = storage_path('app/public/' . $submission->submitted_file_path);
+        }
+        
+        if (!file_exists($filePath)) {
+            Log::error('File not found: ' . $submission->submitted_file_path);
+            abort(404, 'File not found on server');
         }
         
         // Check if this is a view request
@@ -1101,9 +1309,6 @@ class InstructorController extends Controller
         return response()->download($filePath, $submission->original_filename);
     }
 
-    /**
-     * Calculate the percentage score for an assessment based on earned vs max points
-     */
     private function calculateAssessmentScore($assessment, $submission)
     {
         $assessmentType = strtolower(trim($assessment->type));
@@ -1186,7 +1391,6 @@ class InstructorController extends Controller
         ]);
     }
 
-    // Add this new function to recalculate quiz scores
     public function recalculateSubmissionScore(Request $request, $submissionId)
     {
         $instructor = Auth::user();
@@ -1226,5 +1430,76 @@ class InstructorController extends Controller
             'earned_points' => $earnedPoints,
             'total_points' => $totalPoints
         ]);
+    }
+    public function deleteProfileImage(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->profile_image) {
+            // Delete the file from public storage
+            Storage::disk('public')->delete($user->profile_image);
+
+            // Set the profile_image field to null in the database
+            $user->update(['profile_image' => null]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile image deleted successfully!',
+                'user_initial' => strtoupper(substr($user->name, 0, 1))
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No profile image to delete.'
+        ], 404);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+                'different:current_password'
+            ],
+            'confirm_password' => 'required|same:new_password',
+        ], [
+            'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            'new_password.different' => 'New password must be different from current password.',
+            'confirm_password.same' => 'Password confirmation does not match.',
+        ]);
+
+        $user = Auth::user();
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['current_password' => ['Current password is incorrect.']]
+            ], 422);
+        }
+
+        try {
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password updated successfully!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to update password for user {$user->id}: " . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update password. Please try again.'
+            ], 500);
+        }
     }
 }

@@ -28,12 +28,13 @@ class MaterialController extends Controller
     public function store(Request $request, Course $course)
     {
         // Define allowed extensions and their categories for validation and type determination
-        $allowedDocumentExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'];
-        $allowedCodeExtensions = ['java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml'];
-        $allowedVideoExtensions = ['mp4', 'mov', 'avi', 'webm', 'ogg'];
-        $allowedAudioExtensions = ['mp3', 'wav', 'ogg', 'aac', 'flac'];
-        $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
-        $allowedArchiveExtensions = ['zip', 'rar', '7z', 'tar', 'gz'];
+        $allowedDocumentExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'csv'];
+        $allowedCodeExtensions = ['java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml', 'cpp', 'c', 'h', 'hpp', 'cs', 'rb', 'go', 'swift', 'kt', 'scala', 'r', 'sql', 'sh', 'bat', 'ps1', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf', 'md', 'rst', 'tex'];
+        $allowedVideoExtensions = ['mp4', 'mov', 'avi', 'webm', 'ogg', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'mpg', 'mpeg'];
+        $allowedAudioExtensions = ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma', 'opus', 'aiff', 'au'];
+        $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif'];
+        $allowedArchiveExtensions = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'lzma', 'cab', 'iso'];
+        $allowedOtherExtensions = ['apk', 'exe', 'msi', 'deb', 'rpm', 'dmg', 'pkg', 'bin', 'jar', 'war', 'ear'];
 
         $allAllowedExtensions = array_merge(
             $allowedDocumentExtensions,
@@ -41,7 +42,8 @@ class MaterialController extends Controller
             $allowedVideoExtensions,
             $allowedAudioExtensions,
             $allowedImageExtensions,
-            $allowedArchiveExtensions
+            $allowedArchiveExtensions,
+            $allowedOtherExtensions
         );
 
         // 1. Validate the incoming request data
@@ -49,12 +51,22 @@ class MaterialController extends Controller
             'topic_id' => 'nullable|exists:topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'material_file' => 'required|file|mimes:' . implode(',', $allAllowedExtensions) . '|max:20480', // 20MB max file size
+            'material_file' => [
+                'required',
+                'file',
+                'max:102400', // 100MB max file size (100 * 1024 = 102400 KB)
+                function ($attribute, $value, $fail) use ($allAllowedExtensions) {
+                    $extension = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($extension, $allAllowedExtensions)) {
+                        $fail('The file type is not supported. Allowed types: ' . implode(', ', $allAllowedExtensions));
+                    }
+                },
+            ],
             'material_type' => [
                 'nullable',
                 'string',
                 Rule::in([
-                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'other' // Expanded types
+                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other' // Expanded types
                 ]),
             ],
             'available_at' => 'nullable|date',
@@ -87,6 +99,8 @@ class MaterialController extends Controller
                     $fileType = 'code';
                 } elseif (in_array($extension, $allowedArchiveExtensions)) {
                     $fileType = 'archive';
+                } elseif (in_array($extension, $allowedOtherExtensions)) {
+                    $fileType = 'executable';
                 } else {
                     $fileType = 'other'; // Fallback for any other allowed but uncategorized type
                 }
@@ -123,17 +137,11 @@ class MaterialController extends Controller
         return redirect()->route('courses.show', $course->id)->with('success', 'Material uploaded successfully!');
     }
 
-    /**
-     * Display the specified material content.
-     */
     public function show(Material $material)
     {
         return view('instructor.material.showMaterial', compact('material'));
     }
 
-    /**
-     * Download the specified material file.
-     */
     public function download(Material $material)
     {
         // Check if the material is currently available based on timestamps
@@ -149,5 +157,123 @@ class MaterialController extends Controller
         }
 
         return back()->with('error', 'Material file not found.');
+    }
+
+    public function edit(Material $material)
+    {
+        $course = $material->course;
+        $topicId = $material->topic_id;
+        
+        return view('instructor.material.createMaterials', compact('course', 'material', 'topicId'));
+    }
+
+    public function update(Request $request, Material $material)
+    {
+        // Define allowed extensions (same as store method)
+        $allowedDocumentExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'csv'];
+        $allowedCodeExtensions = ['java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml', 'cpp', 'c', 'h', 'hpp', 'cs', 'rb', 'go', 'swift', 'kt', 'scala', 'r', 'sql', 'sh', 'bat', 'ps1', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf', 'md', 'rst', 'tex'];
+        $allowedVideoExtensions = ['mp4', 'mov', 'avi', 'webm', 'ogg', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'mpg', 'mpeg'];
+        $allowedAudioExtensions = ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma', 'opus', 'aiff', 'au'];
+        $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif'];
+        $allowedArchiveExtensions = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'lzma', 'cab', 'iso'];
+        $allowedOtherExtensions = ['apk', 'exe', 'msi', 'deb', 'rpm', 'dmg', 'pkg', 'bin', 'jar', 'war', 'ear'];
+
+        $allAllowedExtensions = array_merge(
+            $allowedDocumentExtensions,
+            $allowedCodeExtensions,
+            $allowedVideoExtensions,
+            $allowedAudioExtensions,
+            $allowedImageExtensions,
+            $allowedArchiveExtensions,
+            $allowedOtherExtensions
+        );
+
+        // Validation rules for update
+        $validated = $request->validate([
+            'topic_id' => 'nullable|exists:topics,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'material_file' => [
+                'nullable', // File is optional for updates
+                'file',
+                'max:102400', // 100MB max file size
+                function ($attribute, $value, $fail) use ($allAllowedExtensions) {
+                    if ($value) { // Only validate if file is provided
+                        $extension = strtolower($value->getClientOriginalExtension());
+                        if (!in_array($extension, $allAllowedExtensions)) {
+                            $fail('The file type is not supported. Allowed types: ' . implode(', ', $allAllowedExtensions));
+                        }
+                    }
+                },
+            ],
+            'material_type' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other'
+                ]),
+            ],
+            'available_at' => 'nullable|date',
+            'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+        ]);
+
+        // Handle file upload if new file is provided
+        if ($request->hasFile('material_file')) {
+            // Delete old file if it exists
+            if ($material->file_path && Storage::disk('public')->exists($material->file_path)) {
+                Storage::disk('public')->delete($material->file_path);
+            }
+
+            $file = $request->file('material_file');
+            $originalFilename = $file->getClientOriginalName();
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            // Determine material_type based on extension if not explicitly set
+            if (!$request->filled('material_type')) {
+                if (in_array($extension, ['pdf'])) {
+                    $fileType = 'pdf';
+                } elseif (in_array($extension, $allowedDocumentExtensions)) {
+                    $fileType = 'document';
+                } elseif (in_array($extension, $allowedVideoExtensions)) {
+                    $fileType = 'video';
+                } elseif (in_array($extension, $allowedAudioExtensions)) {
+                    $fileType = 'audio';
+                } elseif (in_array($extension, $allowedImageExtensions)) {
+                    $fileType = 'image';
+                } elseif (in_array($extension, $allowedCodeExtensions)) {
+                    $fileType = 'code';
+                } elseif (in_array($extension, $allowedArchiveExtensions)) {
+                    $fileType = 'archive';
+                } elseif (in_array($extension, $allowedOtherExtensions)) {
+                    $fileType = 'executable';
+                } else {
+                    $fileType = 'other';
+                }
+            } else {
+                $fileType = $request->material_type;
+            }
+
+            $fileName = Str::slug(pathinfo($originalFilename, PATHINFO_FILENAME)) . '-' . time() . '.' . $extension;
+            $directory = 'materials/' . $material->course_id;
+            $filePath = Storage::disk('public')->putFileAs($directory, $file, $fileName);
+
+            $material->file_path = $filePath;
+            $material->material_type = $fileType;
+            $material->original_filename = $originalFilename;
+        }
+
+        // Update other fields
+        $localTimezone = 'Asia/Manila';
+        $availableAt = $validated['available_at'] ? Carbon::parse($validated['available_at'], $localTimezone)->setTimezone('UTC') : null;
+        $unavailableAt = $validated['unavailable_at'] ? Carbon::parse($validated['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
+
+        $material->topic_id = $request->input('topic_id');
+        $material->title = $validated['title'];
+        $material->description = $validated['description'];
+        $material->available_at = $availableAt;
+        $material->unavailable_at = $unavailableAt;
+        $material->save();
+
+        return redirect()->route('materials.show', $material->id)->with('success', 'Material updated successfully!');
     }
 }
