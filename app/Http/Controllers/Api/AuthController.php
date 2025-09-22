@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Str; // For random_int
 use Carbon\Carbon; // For carbon
 use App\Notifications\VerifyEmailWithCode; // Import your custom notification
 
@@ -86,4 +86,65 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Logged out successfully!']);
     }
+
+    public function handleGoogleAuth(Request $request)
+    {
+        $request->validate([
+            'google_id' => 'required|string',
+            'email' => 'required|email',
+            'name' => 'required|string',
+            'avatar' => 'nullable|string',
+        ]);
+
+        try {
+            // Find user by Google ID or email
+            $user = User::where('google_id', $request->google_id)
+                        ->orWhere('email', $request->email)
+                        ->first();
+
+            if ($user) {
+                // User exists - link Google account if not already linked
+                if (empty($user->google_id)) {
+                    $user->google_id = $request->google_id;
+                    $user->save();
+                }
+                
+                // Mark email as verified if from Google
+                if (is_null($user->email_verified_at)) {
+                    $user->email_verified_at = now();
+                    $user->save();
+                }
+            } else {
+                // Create new user
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'google_id' => $request->google_id,
+                    'password' => Hash::make(Str::random(24)), // Random password
+                    'role' => 'student', // Default role for mobile users
+                    'email_verified_at' => now(), // Google emails are verified
+                    'profile_image' => $request->avatar, // Save Google avatar if provided
+                ]);
+            }
+
+            // Create token for mobile app
+            $token = $user->createToken('google_auth_token')->plainTextToken;
+
+            return response()->json([
+                'message' => 'Google authentication successful!',
+                'user' => $user,
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'is_verified' => true,
+                'is_new_user' => !$user->wasRecentlyCreated,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Google authentication failed.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }

@@ -10,10 +10,12 @@ use App\Http\Controllers\Api\StudentMaterialController;
 use App\Http\Controllers\Api\StudentAssessmentController; 
 use App\Http\Controllers\Api\StudentSubmittedAssessmentController; 
 use App\Http\Controllers\Api\TimeController;
+use App\Http\Controllers\Api\ProfileController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/google', [AuthController::class, 'handleGoogleAuth']);
 
 // Protected routes (require Sanctum authentication)
 Route::middleware('auth:sanctum')->group(function () {
@@ -33,6 +35,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/unenroll', [EnrollmentController::class, 'unenroll']);
 
     Route::get('/time', [TimeController::class, 'index']);
+
+    // Profile Routes
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::post('/profile', [ProfileController::class, 'update']);
+    Route::delete('/profile/image', [ProfileController::class, 'deleteProfileImage']);
 
     // course routes
     Route::get('/my-courses', [EnrollmentController::class, 'myCourses']);
@@ -61,6 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Route for offline quiz
     Route::post('/assessments/{assessment}/sync-offline-quiz', [StudentSubmittedAssessmentController::class, 'syncOfflineQuiz']);
+    
+    Route::get('/student/notifications', [ProfileController::class, 'getNotifications']);
+    Route::post('/student/mark-notification-as-read', [ProfileController::class, 'markNotificationAsRead']);
+    Route::post('/student/mark-all-notifications-as-read', [ProfileController::class, 'markAllNotificationsAsRead']);
 });
 
 Route::get('/materials/{material}/view-signed', [StudentMaterialController::class, 'viewSigned'])

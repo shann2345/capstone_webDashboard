@@ -507,11 +507,22 @@ class StudentSubmittedAssessmentController extends Controller
         }
     }
 
-    public function showSubmittedAssessment(SubmittedAssessment $submittedAssessment)
+    public function showSubmittedAssessment($submittedAssessmentId)
     {
         $user = Auth::user();
-        if (!$user || $submittedAssessment->student_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized to view this submission.'], 403);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $submittedAssessment = SubmittedAssessment::find($submittedAssessmentId);
+
+        if (!$submittedAssessment || $submittedAssessment->student_id !== $user->id) {
+            return response()->json([
+                'submitted_assessment' => [
+                    'score' => null,
+                    'status' => 'not_started',
+                ]
+            ]);
         }
 
         $submittedAssessment->load([
@@ -519,7 +530,13 @@ class StudentSubmittedAssessmentController extends Controller
             'submittedQuestions.submittedOptions'
         ]);
 
-        return response()->json(['submitted_assessment' => $submittedAssessment]);
+        return response()->json([
+            'submitted_assessment' => [
+                'score' => $submittedAssessment->score,
+                'status' => $submittedAssessment->status,
+                // ...other fields if needed...
+            ]
+        ]);
     }
     public function updateSubmittedQuestionAnswer(Request $request, SubmittedQuestion $submittedQuestion)
     {
