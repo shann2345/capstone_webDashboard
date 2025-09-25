@@ -897,14 +897,17 @@ class InstructorController extends Controller
         
         $activities = $this->getRecentActivities($courses, $dateRange);
         
-        // Get read notifications from session
-        $readNotifications = session('read_notifications', []);
+        // Get read notifications from database instead of session
+        $readNotificationHashes = \App\Models\InstructorNotification::where('instructor_id', $instructor->id)
+            ->where('is_read', true)
+            ->pluck('notification_hash')
+            ->toArray();
         
         // Add read status to each activity
-        $notifications = $activities->map(function ($activity) use ($readNotifications) {
-            $notificationId = md5($activity['type'] . $activity['description'] . $activity['date']);
-            $activity['id'] = $notificationId;
-            $activity['read'] = in_array($notificationId, $readNotifications);
+        $notifications = $activities->map(function ($activity) use ($readNotificationHashes) {
+            $notificationHash = md5($activity['type'] . $activity['description'] . $activity['date']);
+            $activity['id'] = $notificationHash;
+            $activity['read'] = in_array($notificationHash, $readNotificationHashes);
             return $activity;
         });
         
@@ -918,24 +921,41 @@ class InstructorController extends Controller
 
     public function markNotificationAsRead(Request $request)
     {
-        $notificationId = $request->input('notification_id');
-        $readNotifications = session('read_notifications', []);
+        $instructor = Auth::user();
+        $notificationHash = $request->input('notification_id');
         
-        if (!in_array($notificationId, $readNotifications)) {
-            $readNotifications[] = $notificationId;
-            session(['read_notifications' => $readNotifications]);
-        }
+        // Create or update notification record in database
+        \App\Models\InstructorNotification::updateOrCreate(
+            [
+                'instructor_id' => $instructor->id,
+                'notification_hash' => $notificationHash
+            ],
+            [
+                'is_read' => true,
+                'read_at' => now()
+            ]
+        );
         
         return response()->json(['success' => true]);
     }
 
     public function markAllNotificationsAsRead(Request $request)
     {
-        $notificationIds = $request->input('notification_ids', []);
-        $readNotifications = session('read_notifications', []);
+        $instructor = Auth::user();
+        $notificationHashes = $request->input('notification_ids', []);
         
-        $readNotifications = array_unique(array_merge($readNotifications, $notificationIds));
-        session(['read_notifications' => $readNotifications]);
+        foreach ($notificationHashes as $hash) {
+            \App\Models\InstructorNotification::updateOrCreate(
+                [
+                    'instructor_id' => $instructor->id,
+                    'notification_hash' => $hash
+                ],
+                [
+                    'is_read' => true,
+                    'read_at' => now()
+                ]
+            );
+        }
         
         return response()->json(['success' => true]);
     }
@@ -1290,6 +1310,21 @@ class InstructorController extends Controller
         if (!file_exists($filePath)) {
             Log::error('File not found: ' . $submission->submitted_file_path);
             abort(404, 'File not found on server');
+        }
+
+        if ($request->boolean('content')) {
+            $safeExtensions = ['txt', 'java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml', 'md', 'log'];
+            $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
+            $mimeType = mime_content_type($filePath);
+
+            // Only return content for text-based files to prevent sending binary data
+            if (str_starts_with($mimeType, 'text/') || in_array(strtolower($fileExtension), $safeExtensions)) {
+                $content = file_get_contents($filePath);
+                return response($content, 200)->header('Content-Type', 'text/plain');
+            } else {
+                // Respond with an error for non-text files
+                return response('Content preview is not available for this file type.', 415);
+            }
         }
         
         // Check if this is a view request

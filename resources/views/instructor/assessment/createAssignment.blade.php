@@ -107,10 +107,9 @@
                                 <label for="assessment_file" class="block text-gray-700 text-sm font-bold mb-2">Upload File (e.g., PDF, Word, Excel for briefs):</label>
                                 <input type="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 @error('assessment_file') border-red-500 @enderror"
                                        id="assessment_file" name="assessment_file"
-                                       accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.txt,.zip,.rar">
+                                       accept="*">
                                 <p class="mt-1 text-sm text-gray-500">
-                                    Supported formats: PDF, DOC, DOCX, XLSX, XLS, PPT, PPTX, TXT, ZIP, RAR (Max: 20MB).
-                                    A description or an uploaded file is required for this assessment type.
+                                    Supported formats: Any file type (Max: 100MB).
                                 </p>
                                 @error('assessment_file')
                                     <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>

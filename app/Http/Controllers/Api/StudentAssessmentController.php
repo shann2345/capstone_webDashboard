@@ -38,15 +38,13 @@ class StudentAssessmentController extends Controller
             } else {
                 Log::warning("Assessment file path exists in DB but file not found on disk: {$assessment->assessment_file_path}");
             }
-        } else {
-            Log::info("No assessment_file_path set for assessment ID: {$assessment->id}");
         }
 
-        // Return the assessment data, merging in the new assessment_file_url
+        // Return the assessment data, including the file URL
         return response()->json([
             'assessment' => array_merge(
-                $assessment->toArray(), // Convert the assessment model to an array
-                ['assessment_file_url' => $assessmentFileUrl] // Add the generated URL
+                $assessment->toArray(),
+                ['assessment_file_url' => $assessmentFileUrl]
             )
         ]);
     }
@@ -81,18 +79,13 @@ class StudentAssessmentController extends Controller
 
     public function download(Assessment $assessment)
     {
-        if (!$assessment->assessment_file_path || !Storage::exists($assessment->assessment_file_path)) {
+        if (!$assessment->assessment_file_path || !Storage::disk('public')->exists($assessment->assessment_file_path)) {
             return response()->json(['message' => 'Assessment file not found.'], 404);
         }
 
-        // You might add authorization here (e.g., only enrolled students can download)
-        // if (!Auth::user()->isEnrolledInCourse($assessment->course_id)) {
-        //     return response()->json(['message' => 'Unauthorized'], 403);
-        // }
-
         $path = $assessment->assessment_file_path;
-        $fileName = basename($path); // Get just the file name
+        $fileName = basename($path);
 
-        return Storage::download($path, $fileName);
+        return Storage::disk('public')->download($path, $fileName);
     }
 }

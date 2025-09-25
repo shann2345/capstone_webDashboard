@@ -407,8 +407,7 @@ class StudentSubmittedAssessmentController extends Controller
 
         try {
             $request->validate([
-                'assignment_file' => 'required|file|max:10240|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,txt,zip,rar,jpg,jpeg,png',
-                // Add submitted_at as an optional validation rule
+                'assignment_file' => 'required|file|max:102400', // Allow all file types up to 100MB
                 'submitted_at' => 'sometimes|date',
             ]);
         } catch (ValidationException $e) {

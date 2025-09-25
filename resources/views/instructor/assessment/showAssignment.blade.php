@@ -102,127 +102,31 @@
                                     $fileUrl = asset('storage/' . $assessment->assessment_file_path);
                                 @endphp
 
-                                @if ($fileExtension == 'pdf')
+                                @if (in_array($fileExtension, ['pdf']))
                                     <div class="p-6">
-                                        <!-- Primary PDF viewer using object tag -->
                                         <object data="{{ $fileUrl }}" type="application/pdf" class="w-full rounded-lg border shadow-inner" style="height: 80vh;">
-                                            <!-- Fallback iframe if object doesn't work -->
-                                            <iframe src="{{ $fileUrl }}#toolbar=1&navpanes=1&scrollbar=1" 
-                                                    class="w-full rounded-lg border shadow-inner" 
-                                                    style="height: 80vh;" 
-                                                    frameborder="0"
-                                                    onload="this.style.display='block'">
-                                                <!-- Final fallback if neither work -->
-                                                <div class="p-8 text-center bg-white border rounded-lg">
-                                                    <p class="text-gray-600 mb-4">Unable to display PDF file in this browser.</p>
-                                                    <a href="{{ $fileUrl }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"></path>
-                                                        </svg>
-                                                        Open PDF in New Tab
-                                                    </a>
-                                                </div>
-                                            </iframe>
+                                            <iframe src="{{ $fileUrl }}#toolbar=1&navpanes=1&scrollbar=1" class="w-full rounded-lg border shadow-inner" style="height: 80vh;" frameborder="0"></iframe>
                                         </object>
-                                        <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                            <p class="text-sm text-blue-700 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                Cannot view PDF directly? 
-                                                <a href="{{ $fileUrl }}" target="_blank" class="ml-1 font-semibold text-blue-600 hover:text-blue-800 underline">Open in new tab</a> or
-                                                <a href="{{ $fileUrl }}" download class="ml-1 font-semibold text-blue-600 hover:text-blue-800 underline">download it here</a>.
-                                            </p>
-                                        </div>
                                     </div>
                                 @elseif (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']))
                                     <div class="p-6 text-center">
-                                        <img src="{{ $fileUrl }}" 
-                                             alt="{{ $assessment->title }}" 
-                                             class="max-w-full h-auto rounded-lg shadow-lg mx-auto border"
-                                             onerror="this.parentElement.innerHTML='<div class=\'p-8 text-center\'><p class=\'text-red-600 mb-4\'>Unable to load image file.</p><a href=\'' + this.src + '\' target=\'_blank\' class=\'text-blue-600 underline\'>Click to view file</a></div>'">
+                                        <img src="{{ $fileUrl }}" alt="{{ $assessment->title }}" class="max-w-full h-auto rounded-lg shadow-lg mx-auto border">
                                     </div>
-                                @elseif (in_array($fileExtension, ['doc', 'docx']))
+                                @elseif (in_array($fileExtension, ['mp4', 'webm', 'ogg']))
                                     <div class="p-6">
-                                        <!-- Try to preview with Google Docs Viewer -->
-                                        <iframe src="https://docs.google.com/gview?url={{ urlencode($fileUrl) }}&embedded=true" 
-                                                class="w-full rounded-lg border shadow-inner" 
-                                                style="height: 80vh;" 
-                                                frameborder="0"
-                                                onload="this.style.display='block'"
-                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                        </iframe>
-                                        <div class="p-8 text-center bg-white border rounded-lg" style="display: none;">
-                                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                                </svg>
-                                            </div>
-                                            <h3 class="text-lg font-semibold text-gray-700 mb-2">Word Document</h3>
-                                            <p class="text-gray-600 mb-4">{{ basename($assessment->assessment_file_path) }}</p>
-                                            <a href="{{ $fileUrl }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                                                </svg>
-                                                Open
-                                            </a>
-                                            <a href="{{ $fileUrl }}" download class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"></path>
-                                                </svg>
-                                                Download
-                                            </a>
-                                        </div>
-                                        <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                                            <p class="text-sm text-green-700 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                Word document preview powered by Google Docs Viewer.
-                                            </p>
-                                        </div>
+                                        <video controls preload="metadata" class="w-full max-h-[70vh] rounded-lg shadow-lg bg-black">
+                                            <source src="{{ $fileUrl }}" type="video/{{ $fileExtension }}">
+                                            Your browser does not support the video tag.
+                                        </video>
                                     </div>
-                                @elseif (in_array($fileExtension, ['xls', 'xlsx']))
-                                    <div class="p-6">
-                                        <!-- Try to preview with Google Docs Viewer -->
-                                        <iframe src="https://docs.google.com/gview?url={{ urlencode($fileUrl) }}&embedded=true" 
-                                                class="w-full rounded-lg border shadow-inner" 
-                                                style="height: 80vh;" 
-                                                frameborder="0"
-                                                onload="this.style.display='block'">
-                                        </iframe>
-                                        <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                                            <p class="text-sm text-green-700 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                Excel document preview. 
-                                                <a href="{{ $fileUrl }}" target="_blank" class="ml-1 font-semibold text-green-600 hover:text-green-800 underline">Open in new tab</a> or
-                                                <a href="{{ $fileUrl }}" download class="ml-1 font-semibold text-green-600 hover:text-green-800 underline">download</a>.
-                                            </p>
-                                        </div>
+                                @elseif (in_array($fileExtension, ['mp3', 'wav', 'ogg']))
+                                    <div class="p-6 text-center">
+                                        <audio controls class="w-full max-w-lg mx-auto rounded-lg shadow-lg">
+                                            <source src="{{ $fileUrl }}" type="audio/{{ $fileExtension }}">
+                                            Your browser does not support the audio element.
+                                        </audio>
                                     </div>
-                                @elseif (in_array($fileExtension, ['ppt', 'pptx']))
-                                    <div class="p-6">
-                                        <!-- Try to preview with Google Docs Viewer -->
-                                        <iframe src="https://docs.google.com/gview?url={{ urlencode($fileUrl) }}&embedded=true" 
-                                                class="w-full rounded-lg border shadow-inner" 
-                                                style="height: 80vh;" 
-                                                frameborder="0"
-                                                onload="this.style.display='block'">
-                                        </iframe>
-                                        <div class="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                                            <p class="text-sm text-purple-700 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                PowerPoint presentation preview.
-                                                <a href="{{ $fileUrl }}" target="_blank" class="ml-1 font-semibold text-purple-600 hover:text-purple-800 underline">Open in new tab</a> or
-                                                <a href="{{ $fileUrl }}" download class="ml-1 font-semibold text-purple-600 hover:text-purple-800 underline">download</a>.
-                                            </p>
-                                        </div>
-                                    </div>
-                                @elseif (in_array($fileExtension, ['txt', 'md', 'java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml', 'csv']))
+                                @elseif (in_array($fileExtension, ['txt', 'java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml']))
                                     <div class="p-6">
                                         <div class="bg-gray-900 rounded-lg p-6 overflow-auto" style="max-height: 500px;">
                                             @php
@@ -230,15 +134,6 @@
                                                 $fileContent = file_exists($filePath) ? file_get_contents($filePath) : 'File not found or cannot be read.';
                                             @endphp
                                             <pre class="text-sm text-green-400 whitespace-pre-wrap font-mono leading-relaxed">{{ $fileContent }}</pre>
-                                        </div>
-                                        <div class="mt-4 p-4 bg-gray-100 rounded-lg border border-gray-300">
-                                            <p class="text-sm text-gray-600 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                                                </svg>
-                                                Viewing as text. 
-                                                <a href="{{ $fileUrl }}" download class="ml-1 font-semibold text-gray-700 hover:text-gray-900 underline">Download original file</a>.
-                                            </p>
                                         </div>
                                     </div>
                                 @else
@@ -249,33 +144,15 @@
                                             </svg>
                                         </div>
                                         <h3 class="text-lg font-semibold text-gray-700 mb-2">{{ strtoupper($fileExtension) }} File</h3>
-                                        <p class="text-gray-600 mb-6">{{ basename($assessment->assessment_file_path) }}</p>
-                                        <div class="flex justify-center gap-3">
-                                            <a href="{{ $fileUrl }}" target="_blank"
-                                               class="inline-flex items-center px-6 py-3 bg-purple-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-wider hover:bg-purple-700 transition ease-in-out duration-150 shadow-lg">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                                                </svg>
-                                                Open File
-                                            </a>
-                                            <a href="{{ $fileUrl }}" download
-                                               class="inline-flex items-center px-6 py-3 bg-green-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-wider hover:bg-green-700 transition ease-in-out duration-150 shadow-lg">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                                </svg>
-                                                Download File
-                                            </a>
-                                        </div>
+                                        <p class="text-gray-600 mb-6">This file cannot be displayed directly in the browser.</p>
+                                        <a href="{{ $fileUrl }}" target="_blank" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                            Open File
+                                        </a>
                                     </div>
                                 @endif
                             </div>
                         @else
                             <div class="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                                <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                </div>
                                 <p class="text-gray-500">No file attached to this assessment.</p>
                             </div>
                         @endif

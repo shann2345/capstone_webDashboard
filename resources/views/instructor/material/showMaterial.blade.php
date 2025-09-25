@@ -115,7 +115,7 @@
                                     </div>
                                 @elseif (in_array($fileExtension, ['mp4', 'webm', 'ogg']) || Str::startsWith($material->file_mime_type, 'video/'))
                                     <div class="p-6">
-                                        <video controls class="w-full max-h-[70vh] rounded-lg shadow-lg bg-black">
+                                        <video controls preload="metadata" class="w-full max-h-[70vh] rounded-lg shadow-lg bg-black">
                                             <source src="{{ asset('storage/' . $material->file_path) }}" type="{{ $material->file_mime_type }}">
                                             Your browser does not support the video tag.
                                         </video>

@@ -706,12 +706,30 @@
                                         <p id="fileName" class="text-lg font-semibold text-gray-900">filename.pdf</p>
                                         <p id="fileSize" class="text-sm text-gray-500">2.4 MB</p>
                                     </div>
-                                    <button id="downloadBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        <span>Download</span>
-                                    </button>
+                                    <div class="flex space-x-3">
+                                        <button id="downloadBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <span>Download</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- File Preview Section --}}
+                                <div id="filePreviewContainer" class="mt-6 border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+                                    <div id="filePreview" class="p-6">
+                                        {{-- Preview content will be dynamically inserted here --}}
+                                    </div>
+                                    <div id="previewError" class="p-12 text-center hidden">
+                                        <div class="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Preview Not Available</h3>
+                                        <p class="text-gray-600">This file type cannot be displayed directly in the browser.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -964,66 +982,127 @@
         }
 
         function loadAssignmentSubmission(assessment) {
-    if (!assessment.submission_id) {
-        document.getElementById('fileName').textContent = 'No file submitted';
-        document.getElementById('fileSize').textContent = '';
-        document.getElementById('submissionDate').textContent = 'Not submitted';
-        document.getElementById('downloadBtn').style.display = 'none';
-        return;
-    }
-
-    // Fetch assignment submission details
-    fetch(`/instructor/submission/${assessment.submission_id}/details`)
-        .then(response => response.json())
-        .then(data => {
-            // Update file information
-            document.getElementById('fileName').textContent = data.submitted_file || 'No file submitted';
-            document.getElementById('fileSize').textContent = data.file_size || '';
-            document.getElementById('submissionDate').textContent = assessment.submitted_at ? 
-                new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
-            
-            // Set up download button
-            const downloadBtn = document.getElementById('downloadBtn');
-            if (data.submitted_file && assessment.submission_id) {
-                downloadBtn.style.display = 'flex';
-                downloadBtn.onclick = function() {
-                    // Use direct URL construction instead of Laravel route helper
-                    window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
-                };
-                
-                // Add view button functionality
-                let viewBtn = document.getElementById('viewBtn');
-                if (!viewBtn) {
-                    viewBtn = document.createElement('button');
-                    viewBtn.id = 'viewBtn';
-                    viewBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 ml-3';
-                    viewBtn.innerHTML = `
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                        </svg>
-                        <span>View</span>
-                    `;
-                    downloadBtn.parentNode.appendChild(viewBtn);
-                }
-                
-                viewBtn.style.display = 'flex';
-                viewBtn.onclick = function() {
-                    window.open(`/instructor/submission/${assessment.submission_id}/download?view=1`, '_blank');
-                };
-            } else {
-                downloadBtn.style.display = 'none';
-                const viewBtn = document.getElementById('viewBtn');
-                if (viewBtn) viewBtn.style.display = 'none';
+            if (!assessment.submission_id) {
+                document.getElementById('fileName').textContent = 'No file submitted';
+                document.getElementById('fileSize').textContent = '';
+                document.getElementById('submissionDate').textContent = 'Not submitted';
+                document.getElementById('downloadBtn').style.display = 'none';
+                document.getElementById('filePreview').innerHTML = '';
+                document.getElementById('previewError').classList.add('hidden');
+                return;
             }
-        })
-        .catch(error => {
-            console.error('Error loading assignment submission:', error);
-            document.getElementById('fileName').textContent = 'Error loading file information';
-            document.getElementById('fileSize').textContent = '';
-            document.getElementById('downloadBtn').style.display = 'none';
-        });
-}
+
+            // Fetch assignment submission details
+            fetch(`/instructor/submission/${assessment.submission_id}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update file information
+                    document.getElementById('fileName').textContent = data.submitted_file || 'No file submitted';
+                    document.getElementById('fileSize').textContent = data.file_size || '';
+                    document.getElementById('submissionDate').textContent = assessment.submitted_at ?
+                        new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
+
+                    // Handle file preview
+                    const filePreview = document.getElementById('filePreview');
+                    const previewError = document.getElementById('previewError');
+                    const fileExtension = data.submitted_file ? data.submitted_file.split('.').pop().toLowerCase() : '';
+                    const previewContainer = document.getElementById('filePreviewContainer');
+                    
+                    // **CORRECTED a bug here: The URL must be publicly accessible via the storage symlink.**
+                    const publicFileUrl = `/storage/${data.submitted_file_path}`;
+
+                    // Show/hide download button
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    if (data.submitted_file && assessment.submission_id) {
+                        downloadBtn.style.display = 'flex';
+                        downloadBtn.onclick = function() {
+                            window.open(`/instructor/submission/${assessment.submission_id}/download`, '_blank');
+                        };
+
+                        // Handle different file types
+                        if (fileExtension) {
+                            if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(fileExtension)) {
+                                // Image preview
+                                filePreview.innerHTML = `
+                                    <div class="p-6 text-center">
+                                        <img src="${publicFileUrl}"
+                                            alt="${data.submitted_file}"
+                                            class="max-w-full h-auto rounded-lg shadow-lg mx-auto border">
+                                    </div>`;
+                                filePreview.classList.remove('hidden');
+                                previewError.classList.add('hidden');
+                            } else if (fileExtension === 'pdf') {
+                                // PDF preview
+                                filePreview.innerHTML = `
+                                    <div class="p-6">
+                                        <iframe src="${publicFileUrl}#toolbar=0"
+                                                class="w-full rounded-lg border shadow-inner"
+                                                style="height: 80vh;"
+                                                frameborder="0"></iframe>
+                                    </div>`;
+                                filePreview.classList.remove('hidden');
+                                previewError.classList.add('hidden');
+                            } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+                                // Video preview
+                                filePreview.innerHTML = `
+                                    <div class="p-6">
+                                        <video controls preload="metadata" class="w-full max-h-[70vh] rounded-lg shadow-lg bg-black">
+                                            <source src="${publicFileUrl}" type="video/${fileExtension}">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    </div>`;
+                                filePreview.classList.remove('hidden');
+                                previewError.classList.add('hidden');
+                            } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+                                // Audio preview
+                                filePreview.innerHTML = `
+                                    <div class="p-6 text-center">
+                                        <audio controls class="w-full max-w-lg mx-auto rounded-lg shadow-lg">
+                                            <source src="${publicFileUrl}" type="audio/${fileExtension}">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>`;
+                                filePreview.classList.remove('hidden');
+                                previewError.classList.add('hidden');
+                            } else if (['txt', 'java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml'].includes(fileExtension)) {
+                                // Text file preview (uses the secure controller endpoint from the previous fix)
+                                fetch(`/instructor/submission/${assessment.submission_id}/download?content=true`)
+                                    .then(response => {
+                                        if (!response.ok) { throw new Error('Network response was not ok'); }
+                                        return response.text();
+                                    })
+                                    .then(content => {
+                                        filePreview.innerHTML = `
+                                            <div class="p-6">
+                                                <div class="bg-gray-900 rounded-lg p-6 overflow-auto" style="max-height: 500px;">
+                                                    <pre class="text-sm text-green-400 whitespace-pre-wrap font-mono leading-relaxed"></pre>
+                                                </div>
+                                            </div>`;
+                                        filePreview.querySelector('pre').textContent = content; // Safely inject content
+                                        filePreview.classList.remove('hidden');
+                                        previewError.classList.add('hidden');
+                                    });
+                            } else {
+                                // Unsupported file type for preview (e.g., .docx, .zip)
+                                filePreview.classList.add('hidden');
+                                previewError.classList.remove('hidden');
+                            }
+                        }
+                    } else {
+                        downloadBtn.style.display = 'none';
+                        filePreview.innerHTML = '';
+                        previewError.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading assignment submission:', error);
+                    document.getElementById('fileName').textContent = 'Error loading file information';
+                    document.getElementById('fileSize').textContent = '';
+                    document.getElementById('downloadBtn').style.display = 'none';
+                    document.getElementById('filePreview').innerHTML = '';
+                    previewError.classList.remove('hidden');
+                });
+        }
 
         function loadQuizSubmission(assessment) {
             const questionsContainer = document.getElementById('quizQuestions');
