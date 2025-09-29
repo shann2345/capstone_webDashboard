@@ -24,20 +24,35 @@
                 <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                     <h2 class="text-xl font-semibold text-gray-900">Course List</h2>
                     <div class="flex items-center space-x-4">
-                        {{-- View Toggle Buttons --}}
-                        <div class="flex items-center space-x-2">
-                            <button id="gridViewBtn" class="p-2 transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                                </svg>
-                            </button>
-                            <button id="listViewBtn" class="p-2 transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                                </svg>
-                            </button>
+                        <div class="flex items-center space-x-4">
+                            {{-- Course Filter Dropdown --}}
+                            <div class="relative">
+                                <select id="courseFilter" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="all">All Courses</option>
+                                    <option value="published">Published</option>
+                                    <option value="draft">Draft</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {{-- View Toggle Buttons --}}
+                            <div class="flex items-center space-x-2">
+                                <button id="gridViewBtn" class="p-2 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                    </svg>
+                                </button>
+                                <button id="listViewBtn" class="p-2 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <span class="text-sm text-gray-600">All Courses</span>
                     </div>
                 </div>
 
@@ -63,7 +78,7 @@
                         {{-- Course Cards Grid --}}
                         <div id="courseGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                             @foreach ($courses as $course)
-                                <div>
+                                <div class="course-card" data-status="{{ $course->status }}">
                                     <div class="bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 overflow-hidden">
                                         {{-- Course Header --}}
                                         <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-20 relative">
@@ -126,7 +141,7 @@
                         {{-- Course List View --}}
                         <div id="courseList" class="space-y-4">
                             @foreach ($courses as $course)
-                                <div class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200">
+                                <div class="course-card bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200" data-status="{{ $course->status }}">
                                     <div class="p-6">
                                         <div class="flex items-start justify-between">
                                             {{-- Course Info --}}
@@ -187,6 +202,7 @@
             const listViewBtn = document.getElementById('listViewBtn');
             const courseGrid = document.getElementById('courseGrid');
             const courseList = document.getElementById('courseList');
+            const courseFilter = document.getElementById('courseFilter');
 
             function applyViewStyles(view) {
                 if (view === 'grid') {
@@ -214,6 +230,57 @@
                 localStorage.setItem('courseView', view); // Save the preference
             }
 
+            function filterCourses(status) {
+                const courseCards = document.querySelectorAll('.course-card');
+                let visibleCount = 0;
+                
+                courseCards.forEach(card => {
+                    const cardStatus = card.getAttribute('data-status');
+                    if (status === 'all' || cardStatus === status) {
+                        card.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Update the course count display or show empty state if needed
+                updateEmptyState(visibleCount);
+            }
+            
+            function updateEmptyState(visibleCount) {
+                const emptyState = document.querySelector('.empty-state');
+                const courseGrid = document.getElementById('courseGrid');
+                const courseList = document.getElementById('courseList');
+                
+                if (visibleCount === 0) {
+                    // Show empty state for filtered results
+                    if (!document.querySelector('.filter-empty-state')) {
+                        const filterEmptyState = document.createElement('div');
+                        filterEmptyState.className = 'filter-empty-state text-center py-12';
+                        filterEmptyState.innerHTML = `
+                            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
+                            <p class="text-gray-500 mb-4">No courses match the selected filter criteria.</p>
+                        `;
+                        
+                        const container = document.querySelector('#courseGrid').parentElement;
+                        container.appendChild(filterEmptyState);
+                    }
+                    document.querySelector('.filter-empty-state').style.display = 'block';
+                } else {
+                    // Hide empty state
+                    const filterEmptyState = document.querySelector('.filter-empty-state');
+                    if (filterEmptyState) {
+                        filterEmptyState.style.display = 'none';
+                    }
+                }
+            }
+
             // Load the saved preference from local storage on page load
             const savedView = localStorage.getItem('courseView');
             if (savedView) {
@@ -223,6 +290,7 @@
                 toggleView('list');
             }
 
+            // Event listeners
             gridViewBtn.addEventListener('click', function() {
                 toggleView('grid');
             });
@@ -230,6 +298,19 @@
             listViewBtn.addEventListener('click', function() {
                 toggleView('list');
             });
+            
+            courseFilter.addEventListener('change', function() {
+                const selectedStatus = this.value;
+                filterCourses(selectedStatus);
+                localStorage.setItem('courseFilter', selectedStatus); // Save filter preference
+            });
+            
+            // Load saved filter preference
+            const savedFilter = localStorage.getItem('courseFilter');
+            if (savedFilter) {
+                courseFilter.value = savedFilter;
+                filterCourses(savedFilter);
+            }
         });
     </script>
 </x-layout>

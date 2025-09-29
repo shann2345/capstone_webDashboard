@@ -7,20 +7,22 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('instructor_notifications', function (Blueprint $table) {
+        Schema::create('student_notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('instructor_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
             $table->string('notification_hash'); // Hash of the notification content
             $table->boolean('is_read')->default(false);
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
             
-            $table->index(['instructor_id', 'is_read']);
+            // A student should only have one notification record per unique activity.
+            $table->unique(['student_id', 'notification_hash']);
+            $table->index(['student_id', 'is_read']);
         });
     }
 
     public function down()
     {
-        Schema::dropIfExists('instructor_notifications');
+        Schema::dropIfExists('student_notifications');
     }
 };

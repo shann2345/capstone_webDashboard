@@ -1,31 +1,31 @@
 {{-- resources/views/courses/show.blade.php --}}
 
 <x-layout>
-    <div class="p-2">
-        <div class="text-sm text-gray-500 mb-4">
+    <div class="p-3 sm:p-4 lg:p-6">
+        <div class="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
             <a href="{{ route('instructor.myCourse') }}" class="hover:underline">My Courses</a> &gt;
             <span>Course Details</span>
         </div>
 
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-4xl font-bold text-gray-900">{{ $course->title }}</h1>
-                <div class="flex items-center mt-2 text-gray-600">
-                    <span class="mr-2">{{ $course->course_code }}</span>
-                    <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">{{ ucfirst($course->status) }}</span>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 break-words">{{ $course->title }}</h1>
+                <div class="flex flex-col sm:flex-row sm:items-center mt-2 text-sm sm:text-base text-gray-600 space-y-1 sm:space-y-0 sm:space-x-2">
+                    <span class="font-medium">{{ $course->course_code }}</span>
+                    <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full w-fit">{{ ucfirst($course->status) }}</span>
                 </div>
             </div>
         </div>
 
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <a href="{{ route('instructor.courseDetails', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+        <div class="border-b border-gray-200 mb-4 sm:mb-6">
+            <nav class="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+                <a href="{{ route('instructor.courseDetails', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm">
                     Course Info
                 </a>
-                <a href="#" class="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" aria-current="page">
+                <a href="#" class="border-blue-500 text-blue-600 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm" aria-current="page">
                     Course Content
                 </a>
-                <a href="{{ route('instructor.courseEnrollee', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                <a href="{{ route('instructor.courseEnrollee', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm">
                     Enrolled Students
                 </a>
             </nav>
@@ -33,19 +33,19 @@
     </div>
 
     <!-- Course Content Header with Add Topic Button -->
-    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 py-6 px-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Course Content</h2>
-                <p class="text-gray-600">Organize your course materials, activities, and assessments by topics</p>
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 py-4 sm:py-6 px-4 sm:px-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+            <div class="min-w-0 flex-1">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Course Content</h2>
+                <p class="text-sm sm:text-base text-gray-600">Organize your course materials, activities, and assessments by topics</p>
             </div>
             <button
                 type="button"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
                 title="Add Topic"
                 id="add-topic-button"
             >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 Add Topic
@@ -66,18 +66,18 @@
             });
     @endphp
 
-    <div class="p-6">
+    <div class="p-4 sm:p-6">
         {{-- No Topics Empty State --}}
         @if($topics->isEmpty())
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-50 mb-4">
-                    <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-blue-50 mb-3 sm:mb-4">
+                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
                 </div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">No topics yet</h3>
-                <p class="text-gray-500 mb-6">Get started by creating your first topic to organize course content</p>
-                <button class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200" onclick="document.getElementById('add-topic-button').click()">
+                <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2">No topics yet</h3>
+                <p class="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">Get started by creating your first topic to organize course content</p>
+                <button class="inline-flex items-center px-3 py-2 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200" onclick="document.getElementById('add-topic-button').click()">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
@@ -86,11 +86,11 @@
             </div>
         @else
             {{-- Topics Section --}}
-            <div class="space-y-6">
+            <div class="space-y-4 sm:space-y-6">
                 @foreach($topics as $index => $topic)
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 topic-section" data-topic-id="{{ $topic->id }}">
                         {{-- Topic Header --}}
-                        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-3 flex-grow">
                                     <div class="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-semibold text-sm">
@@ -325,8 +325,8 @@
             </div>
         @endif
 
-        <div class="flex justify-end mt-8">
-            <a href="{{ route('instructor.dashboard') }}" class="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200">
+        <div class="flex justify-center sm:justify-end mt-6 sm:mt-8">
+            <a href="{{ route('instructor.dashboard') }}" class="inline-flex items-center px-3 py-2 sm:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
@@ -336,29 +336,29 @@
     </div>
 
     {{-- Add Topic Modal --}}
-    <div id="add-topic-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-96 mx-4 transform transition-all duration-200 scale-95">
-            <div class="flex items-center mb-4">
-                <div class="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-full mr-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div id="add-topic-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden backdrop-blur-sm px-4">
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-200 scale-95">
+            <div class="flex items-center mb-3 sm:mb-4">
+                <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 text-blue-600 rounded-full mr-2 sm:mr-3">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
                 </div>
-                <h2 class="text-xl font-semibold text-gray-900">Add New Topic</h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Add New Topic</h2>
             </div>
-            <p class="text-gray-600 mb-4">Create a new topic to organize your course content</p>
+            <p class="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Create a new topic to organize your course content</p>
             <input 
                 type="text" 
                 id="new-topic-name" 
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200" 
+                class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-sm sm:text-base" 
                 placeholder="Enter topic name..."
                 maxlength="100"
             >
-            <div class="flex justify-end gap-3 mt-6">
-                <button id="cancel-add-topic" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
+            <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6">
+                <button id="cancel-add-topic" class="w-full sm:w-auto order-2 sm:order-1 px-3 py-2 sm:px-4 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200 text-sm">
                     Cancel
                 </button>
-                <button id="submit-add-topic" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200">
+                <button id="submit-add-topic" class="w-full sm:w-auto order-1 sm:order-2 px-3 py-2 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 text-sm">
                     Add Topic
                 </button>
             </div>

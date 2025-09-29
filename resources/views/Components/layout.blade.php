@@ -149,43 +149,43 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <div class="bg-gray-800"></div>
 
-    <header class="bg-[#3B82F6] shadow-sm h-16 fixed top-0 w-full z-20 flex items-center justify-between px-4 sm:px-6 md:px-8">
+    <header class="bg-[#3B82F6] shadow-sm h-14 sm:h-16 fixed top-0 w-full z-20 flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8">
 
     <div class="flex items-center">
-      <button id="menu-toggle" class="md:hidden p-2 text-white hover:text-gray-200 focus:outline-none transition-colors duration-200 mr-4 relative z-40">
-        <i class="fa-solid fa-bars fa-lg"></i>
+      <button id="menu-toggle" class="md:hidden p-2 text-white hover:text-gray-200 focus:outline-none transition-colors duration-200 mr-2 sm:mr-4 relative z-40">
+        <i class="fa-solid fa-bars text-lg sm:text-xl"></i>
       </button>
-      <div class="text-2xl font-extrabold text-white">OLIN</div>
+      <div class="text-xl sm:text-2xl font-extrabold text-white">OLIN</div>
     </div>
 
-    <div class="flex items-center space-x-4 relative z-40">
-      <button id="notificationBtn" class="relative p-2 text-white hover:text-gray-200 transition-colors duration-200 focus:outline-none">
-        <i class="fa-solid fa-bell fa-lg"></i>
-        <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden"></span>
+    <div class="flex items-center space-x-2 sm:space-x-4 relative z-40">
+      <button id="notificationBtn" class="relative p-1.5 sm:p-2 text-white hover:text-gray-200 transition-colors duration-200 focus:outline-none">
+        <i class="fa-solid fa-bell text-lg sm:text-xl"></i>
+        <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center hidden text-xs"></span>
       </button>
 
       <div class="relative">
         @if(Auth::user()->profile_image)
-            <a href="#">
-                <img class="w-10 h-10 rounded-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+            <a href="{{ route('instructor.showProfile') }}">
+                <img class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
                      src="{{ asset('storage/' . Auth::user()->profile_image) }}" 
                      alt="{{ Auth::user()->name }}'s profile image">
             </a>
         @else
-            <a href="#" 
-               class="profile-icon bg-white text-[#FFFFFF] font-semibold rounded-full w-10 h-10 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105">
+            <a href="{{ route('instructor.showProfile') }}" 
+               class="profile-icon bg-white text-[#FFFFFF] font-semibold rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 text-sm sm:text-base">
                {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
             </a>
         @endif
-        <span class="absolute bottom-0 right-0 block w-3 h-3 bg-[#10B981] rounded-full border-2 border-[#3B82F6]"></span>
+        <span class="absolute bottom-0 right-0 block w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#10B981] rounded-full border-2 border-[#3B82F6]"></span>
       </div>
 
     </div>
   </header>
 
-    <div class="flex pt-16">
+    <div class="flex pt-14 sm:pt-16">
         <aside id="sidebar"
-        class="modern-sidebar fixed top-16 left-0 h-[calc(100%-4rem)] w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto z-10">
+        class="modern-sidebar fixed top-14 sm:top-16 left-0 h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto z-10">
 
              <nav class="sidebar-nav">
                 <div class="nav-section">
@@ -197,15 +197,6 @@
                             <i class="fas fa-tachometer-alt"></i>
                         </div>
                         <span class="nav-text">Dashboard</span>
-                        <div class="nav-indicator"></div>
-                    </a>
-
-                    <a href="{{ route('instructor.showProfile') }}" 
-                       class="nav-item {{ Request::routeIs('instructor.showProfile') ? 'nav-item-active' : '' }}">
-                        <div class="nav-icon">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <span class="nav-text">Profile</span>
                         <div class="nav-indicator"></div>
                     </a>
 
@@ -236,16 +227,15 @@
                         <div class="nav-indicator"></div>
                     </a>
                 </div>
-
                 <div class="nav-section">
-                    <div class="nav-section-title">Analytics</div>
+                    <div class="nav-section-title"></div>
                     
-                    <a href="#" 
+                    <a href="{{ route('instructor.archive') }}" 
                        class="nav-item">
                         <div class="nav-icon">
-                            <i class="fas fa-chart-bar"></i>
+                            <i class="fas fa-box"></i>
                         </div>
-                        <span class="nav-text">Reports</span>
+                        <span class="nav-text">Archive Courses</span>
                         <div class="nav-indicator"></div>
                     </a>
                 </div>
@@ -256,39 +246,17 @@
                     <a href="#" 
                        class="nav-item">
                         <div class="nav-icon">
-                            <i class="fas fa-question-circle"></i>
+                            <i class="fas fa-phone"></i>
                         </div>
-                        <span class="nav-text">Help Center</span>
+                        <span class="nav-text">Contact</span>
                         <div class="nav-indicator"></div>
                     </a>
                 </div>
             </nav>
         </aside>
 
-        <main class="flex-1 p-6 overflow-auto ml-64">
-            {{-- <div class="flex justify-start space-x-4 mb-6">
-                <a href="{{ Route('course.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    <span>Create New Course</span>
-                </a>
-                <button class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v10.586a1 1 0 01-1.707.707L15 15.586V6a4 4 0 00-4-4H9a4 4 0 00-4 4v9.586l-.293.293A1 1 0 014 15.586V5zM14 6H6v8h8V6z" clip-rule="evenodd" />
-                    </svg>
-                    <span>View All My Courses</span>
-                </button>
-                <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    </svg>
-                    <span>View Reports</span>
-                </button>
-            </div>
-             --}}
+        <main class="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto md:ml-64">
+            {{-- Content goes here --}}
             <?php echo $slot ?>
         </main>
     </div>
@@ -296,38 +264,38 @@
 
     <!-- Notification Modal -->
     <div id="notificationModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-2 sm:px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeNotificationModal()"></div>
             
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full w-full max-w-sm mx-2 sm:mx-0">
+                <div class="bg-white px-3 sm:px-4 pt-4 sm:pt-5 pb-3 sm:pb-4 sm:p-6 sm:pb-4">
                     <div class="sm:flex sm:items-start">
                         <div class="w-full">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg leading-6 font-medium text-gray-900 flex items-center">
-                                    <i class="fas fa-bell text-blue-600 mr-2"></i>
+                            <div class="flex items-center justify-between mb-3 sm:mb-4">
+                                <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900 flex items-center">
+                                    <i class="fas fa-bell text-blue-600 mr-2 text-sm sm:text-base"></i>
                                     Notifications
                                 </h3>
-                                <div class="flex items-center space-x-2">
-                                    <button id="markAllReadBtn" class="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                                <div class="flex items-center space-x-1 sm:space-x-2">
+                                    <button id="markAllReadBtn" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 transition-colors">
                                         Mark all as read
                                     </button>
-                                    <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600">
-                                        <i class="fas fa-times"></i>
+                                    <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                                        <i class="fas fa-times text-sm"></i>
                                     </button>
                                 </div>
                             </div>
                             
-                            <div id="notificationsList" class="max-h-96 overflow-y-auto">
-                                <div id="notificationsLoading" class="flex items-center justify-center py-8">
-                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <div id="notificationsList" class="max-h-64 sm:max-h-96 overflow-y-auto">
+                                <div id="notificationsLoading" class="flex items-center justify-center py-6 sm:py-8">
+                                    <div class="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
                                 </div>
-                                <div id="notificationsContent" class="hidden space-y-3">
+                                <div id="notificationsContent" class="hidden space-y-2 sm:space-y-3">
                                     <!-- Notifications will be loaded here -->
                                 </div>
-                                <div id="noNotifications" class="hidden text-center py-8 text-gray-500">
-                                    <i class="fas fa-bell-slash text-4xl mb-4 text-gray-300"></i>
-                                    <p>No notifications yet</p>
+                                <div id="noNotifications" class="hidden text-center py-6 sm:py-8 text-gray-500">
+                                    <i class="fas fa-bell-slash text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                                    <p class="text-sm sm:text-base">No notifications yet</p>
                                 </div>
                             </div>
                         </div>
@@ -339,11 +307,17 @@
 
     <style>
         .notification-item {
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             border: 1px solid #e5e7eb;
             transition: all 0.2s ease;
             cursor: pointer;
+        }
+        
+        @media (min-width: 640px) {
+            .notification-item {
+                padding: 12px;
+            }
         }
 
         .notification-item:hover {
@@ -360,13 +334,20 @@
         }
 
         .notification-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+        }
+        
+        @media (min-width: 640px) {
+            .notification-icon {
+                width: 32px;
+                height: 32px;
+            }
         }
 
         .notification-icon.assessment_submitted {
@@ -378,11 +359,44 @@
         }
 
         .unread-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background-color: #3b82f6;
             border-radius: 50%;
             flex-shrink: 0;
+        }
+        
+        @media (min-width: 640px) {
+            .unread-dot {
+                width: 8px;
+                height: 8px;
+            }
+        }
+        
+        /* Mobile sidebar backdrop */
+        @media (max-width: 767px) {
+            #sidebar:not(.-translate-x-full)::before {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: -1;
+            }
+            
+            .nav-item {
+                padding: 14px 20px;
+                margin: 0 8px;
+                font-size: 16px;
+            }
+            
+            .nav-text {
+                font-size: 15px;
+            }
+            
+            .nav-section-title {
+                padding: 0 16px;
+                font-size: 12px;
+            }
         }
     </style>
 
@@ -452,12 +466,12 @@
             
             contentEl.innerHTML = notifications.map(notification => `
                 <div class="notification-item ${notification.read ? '' : 'unread'}" onclick="markAsRead('${notification.id}')">
-                    <div class="flex items-start space-x-3">
+                    <div class="flex items-start space-x-2 sm:space-x-3">
                         <div class="notification-icon ${notification.type}">
                             ${getNotificationIcon(notification.type)}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-800 font-medium">${notification.description}</p>
+                            <p class="text-xs sm:text-sm text-gray-800 font-medium">${notification.description}</p>
                             ${notification.course ? `<p class="text-xs text-gray-500 mt-1">📚 ${notification.course}</p>` : ''}
                             <p class="text-xs text-gray-500 mt-1">🕐 ${formatDate(notification.date)}</p>
                         </div>

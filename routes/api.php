@@ -66,7 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/submitted-questions/{submittedQuestion}/answer', [StudentSubmittedAssessmentController::class, 'updateSubmittedQuestionAnswer']);
     Route::post('/submitted-assessments/{submittedAssessment}/finalize-quiz', [StudentSubmittedAssessmentController::class, 'finalizeQuizAttempt']);
 
-    // Route for offline quiz
+    Route::get('/assessments/{assessment}/submitted-assessment', [StudentSubmittedAssessmentController::class, 'getSubmittedAssessmentByAssessmentId']);
+
     Route::post('/assessments/{assessment}/sync-offline-quiz', [StudentSubmittedAssessmentController::class, 'syncOfflineQuiz']);
     
     Route::get('/student/notifications', [ProfileController::class, 'getNotifications']);

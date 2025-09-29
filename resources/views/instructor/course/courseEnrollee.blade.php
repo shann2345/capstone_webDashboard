@@ -1,35 +1,35 @@
 <x-layout>
-    <div class="p-2">
-        <div class="text-sm text-gray-500 mb-4">
+    <div class="p-3 sm:p-4 lg:p-6">
+        <div class="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
             <a href="{{ route('instructor.myCourse') }}" class="hover:underline">My Courses</a> &gt;
             <span>Course Details</span>
         </div>
 
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-4xl font-bold text-gray-900">{{ $course->title }}</h1>
-                <div class="flex items-center mt-2 text-gray-600">
-                    <span class="mr-2">{{ $course->course_code }}</span>
-                    <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">{{ ucfirst($course->status) }}</span>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 break-words">{{ $course->title }}</h1>
+                <div class="flex flex-col sm:flex-row sm:items-center mt-2 text-sm sm:text-base text-gray-600 space-y-1 sm:space-y-0 sm:space-x-2">
+                    <span class="font-medium">{{ $course->course_code }}</span>
+                    <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full w-fit">{{ ucfirst($course->status) }}</span>
                 </div>
             </div>
         </div>
 
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <a href="{{ route('instructor.courseDetails', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+        <div class="border-b border-gray-200 mb-4 sm:mb-6">
+            <nav class="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+                <a href="{{ route('instructor.courseDetails', $course->id) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm">
                     Course Info
                 </a>
-                <a href="{{ route('courses.show', ['course'=>$course->id]) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                <a href="{{ route('courses.show', ['course'=>$course->id]) }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm">
                     Course Content
                 </a>
-                <a href="#" class="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" aria-current="page">
+                <a href="#" class="border-blue-500 text-blue-600 whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm" aria-current="page">
                     Enrolled Students
                 </a>
             </nav>
         </div>
 
-        <div class="mt-6 bg-white p-6 rounded-lg shadow-sm">
+        <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
             {{-- <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-semibold text-gray-900">Section & Student Management</h2>
@@ -38,13 +38,13 @@
             </div> --}}
 
             @if(session('success'))
-                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+                <div class="bg-green-50 border border-green-200 text-green-700 px-3 py-2 sm:px-4 sm:py-3 rounded mb-3 sm:mb-4 text-sm sm:text-base">
                     {{ session('success') }}
                 </div>
             @endif
 
             @if(session('error'))
-                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                <div class="bg-red-50 border border-red-200 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded mb-3 sm:mb-4 text-sm sm:text-base">
                     {{ session('error') }}
                 </div>
             @endif
@@ -59,33 +59,33 @@
                 </div>
             @endif
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Create New Program and Section</h3>
-                    <form action="{{ route('instructor.createSection', $course->id) }}" method="POST" class="flex space-x-2">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+                <div class="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2 sm:mb-3">Create New Program and Section</h3>
+                    <form action="{{ route('instructor.createSection', $course->id) }}" method="POST" class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         @csrf
                         <input type="text" name="name" placeholder="Example: (BSIT-4D, BSCS-3A, etc.)" 
-                               class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                               class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <button type="submit" class="w-full sm:w-auto bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base font-medium whitespace-nowrap">
                             Create Section
                         </button>
                     </form>
                 </div>
 
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Existing Program and Sections</h3>
+                <div class="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2 sm:mb-3">Existing Program and Sections</h3>
                     @if($sections->count() > 0)
                         <div class="space-y-2">
                             @foreach($sections as $section)
-                                <div class="flex justify-between items-center bg-white px-3 py-2 rounded border">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white px-3 py-2 rounded border space-y-2 sm:space-y-0">
                                     <div>
-                                        <span class="font-medium">{{ $section->name }}</span>
-                                        <span class="text-sm text-gray-500 ml-2">({{ $section->students->count() }} students)</span>
+                                        <span class="font-medium text-sm sm:text-base">{{ $section->name }}</span>
+                                        <span class="text-xs sm:text-sm text-gray-500 ml-2">({{ $section->students->count() }} students)</span>
                                     </div>
                                     <form action="{{ route('instructor.deleteSection', $section->id) }}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-800 text-sm" 
+                                        <button type="submit" class="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium px-2 py-1 rounded hover:bg-red-50" 
                                                 onclick="return confirm('Are you sure? Students will be moved to no section.')">
                                             Delete
                                         </button>
@@ -94,7 +94,7 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-gray-500 text-sm">No sections created yet</p>
+                        <p class="text-gray-500 text-xs sm:text-sm">No sections created yet</p>
                     @endif
                 </div>
             </div>

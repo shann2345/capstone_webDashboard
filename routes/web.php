@@ -77,6 +77,7 @@ Route::middleware(['auth:web', 'role:admin', 'verified'])->group(function () {
 
 // In routes/web.php
 Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function () {
+
     Route::get('/instructor/dashboard', [InstructorController::class, 'index'])->name('instructor.dashboard');
     Route::get('/instructor/myCourse', [InstructorController::class, 'show'])->name('instructor.myCourse');
     Route::get('/instructor/myCourse/{course}', [InstructorController::class, 'showCourseDetails'])->name('instructor.courseDetails');
@@ -106,7 +107,10 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::get('/instructor/notifications', [InstructorController::class, 'getNotifications'])->name('instructor.notifications');
     Route::post('/instructor/notifications/mark-read', [InstructorController::class, 'markNotificationAsRead'])->name('instructor.markNotificationAsRead');
     Route::post('/instructor/notifications/mark-all-read', [InstructorController::class, 'markAllNotificationsAsRead'])->name('instructor.markAllNotificationsAsRead');
+    Route::post('/instructor/students/export', [InstructorController::class, 'exportStudentAssessments'])->name('instructor.students.exportAssessments');
     
+    Route::get('/instructor/archive', [InstructorController::class, 'archiveCourses'])->name('instructor.archive');
+
     Route::get('/course', [CourseController::class, 'create'])->name('course.create');
     Route::post('/course/createCourse', [CourseController::class, 'store'])->name('course.store');
     Route::get('/course/{course}', [CourseController::class, 'show'])->name('courses.show');

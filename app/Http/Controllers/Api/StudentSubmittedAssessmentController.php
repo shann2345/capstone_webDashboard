@@ -888,4 +888,49 @@ class StudentSubmittedAssessmentController extends Controller
 
         return true;
     }
+    public function getSubmittedAssessmentByAssessmentId(Assessment $assessment)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        // Check if user is enrolled in the course
+        if (!method_exists($user, 'isEnrolledInCourse') || !$user->isEnrolledInCourse($assessment->course_id)) {
+            return response()->json(['message' => 'Unauthorized: Not enrolled in the course for this assessment.'], 403);
+        }
+
+        // Get the submitted assessment for this specific student and assessment
+        $submittedAssessment = SubmittedAssessment::where('student_id', $user->id)
+                                                ->where('assessment_id', $assessment->id)
+                                                ->orderBy('created_at', 'desc') // Get the latest submission
+                                                ->first();
+
+        if (!$submittedAssessment) {
+            return response()->json([
+                'submitted_assessment' => [
+                    'score' => null,
+                    'status' => 'not_started',
+                    'submitted_at' => null,
+                    'is_passed' => null,
+                    'attempt_number' => 0,
+                ]
+            ], 200);
+        }
+
+        return response()->json([
+            'submitted_assessment' => [
+                'id' => $submittedAssessment->id,
+                'score' => $submittedAssessment->score,
+                'status' => $submittedAssessment->status,
+                'submitted_at' => $submittedAssessment->submitted_at,
+                'started_at' => $submittedAssessment->started_at,
+                'completed_at' => $submittedAssessment->completed_at,
+                'is_passed' => $submittedAssessment->is_passed,
+                'attempt_number' => $submittedAssessment->attempt_number ?? 1,
+                'instructor_feedback' => $submittedAssessment->instructor_feedback,
+                'graded_at' => $submittedAssessment->graded_at,
+            ]
+        ], 200);
+    }
 }

@@ -115,18 +115,31 @@
             /* My Account Page Specific Styles */
             .profile-content {
                 display: grid;
-                grid-template-columns: 1fr 2fr;
-                gap: 3rem;
+                grid-template-columns: 1fr;
+                gap: 2rem;
                 align-items: start;
+            }
+            
+            @media (min-width: 768px) {
+                .profile-content {
+                    grid-template-columns: 1fr 2fr;
+                    gap: 3rem;
+                }
             }
 
             .profile-photo-section {
                 text-align: center;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 2rem;
+                padding: 1.5rem;
                 border-radius: 1.5rem;
                 color: white;
                 box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            }
+            
+            @media (min-width: 640px) {
+                .profile-photo-section {
+                    padding: 2rem;
+                }
             }
 
             .photo-container {
@@ -138,13 +151,29 @@
 
             .profile-photo {
                 position: relative;
-                width: 180px;
-                height: 180px;
+                width: 120px;
+                height: 120px;
                 border-radius: 50%;
                 overflow: hidden;
-                border: 5px solid rgba(255, 255, 255, 0.3);
+                border: 4px solid rgba(255, 255, 255, 0.3);
                 box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
                 transition: all 0.3s ease;
+                margin: 0 auto;
+            }
+            
+            @media (min-width: 640px) {
+                .profile-photo {
+                    width: 150px;
+                    height: 150px;
+                }
+            }
+            
+            @media (min-width: 768px) {
+                .profile-photo {
+                    width: 180px;
+                    height: 180px;
+                    border: 5px solid rgba(255, 255, 255, 0.3);
+                }
             }
 
             .profile-photo:hover {
@@ -183,17 +212,26 @@
                 background: linear-gradient(135deg, #2c41dd 0%, #000b5b 100%);
                 color: white;
                 border: none;
-                padding: 1rem 2rem;
+                padding: 0.75rem 1.5rem;
                 border-radius: 2rem;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 display: flex;
                 align-items: center;
-                gap: 0.75rem;
+                gap: 0.5rem;
                 box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
                 position: relative;
                 overflow: hidden;
+                font-size: 0.875rem;
+            }
+            
+            @media (min-width: 640px) {
+                .change-photo-btn {
+                    padding: 1rem 2rem;
+                    gap: 0.75rem;
+                    font-size: 1rem;
+                }
             }
 
             .change-photo-btn:before {
@@ -219,17 +257,31 @@
             .profile-form {
                 flex: 1;
                 background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                padding: 2rem;
+                padding: 1.5rem;
                 border-radius: 1.5rem;
                 border: 2px solid #e2e8f0;
                 box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             }
+            
+            @media (min-width: 640px) {
+                .profile-form {
+                    padding: 2rem;
+                }
+            }
 
             .form-row {
                 display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 2rem;
-                margin-bottom: 2rem;
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            @media (min-width: 768px) {
+                .form-row {
+                    grid-template-columns: 1fr 1fr;
+                    gap: 2rem;
+                    margin-bottom: 2rem;
+                }
             }
 
             .form-group {
@@ -310,18 +362,26 @@
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 border: none;
-                padding: 1.25rem 3rem;
+                padding: 1rem 2rem;
                 border-radius: 2rem;
                 font-weight: 700;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 display: inline-flex;
                 align-items: center;
-                gap: 0.75rem;
-                font-size: 1.1rem;
+                gap: 0.5rem;
+                font-size: 1rem;
                 box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
                 position: relative;
                 overflow: hidden;
+            }
+            
+            @media (min-width: 640px) {
+                .save-btn {
+                    padding: 1.25rem 3rem;
+                    gap: 0.75rem;
+                    font-size: 1.1rem;
+                }
             }
 
             .save-btn:before {
@@ -1506,9 +1566,9 @@
 
     <!-- Instructor Account Management Page -->
     <div class="profile-page-wrapper">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-1">My Account</h1>
-        <p class="text-gray-600 text-lg">Manage your profile, preferences, and account settings.</p>
+    <div class="mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">My Account</h1>
+        <p class="text-gray-600 text-base sm:text-lg">Manage your profile, preferences, and account settings.</p>
     </div>
 
 <!-- Flash Messages -->
@@ -1541,9 +1601,9 @@
 </div>
 
 <!-- A. MY PROFILE SECTION -->
-<section class="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-        <i class="fas fa-user-circle text-blue-600 mr-3"></i>
+<section class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-gray-200">
+    <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center">
+        <i class="fas fa-user-circle text-blue-600 mr-2 sm:mr-3"></i>
         My Profile
     </h2>
     
@@ -1675,9 +1735,9 @@
 </section>
 
 <!-- B. SETTINGS SECTION -->
-<section class="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-        <i class="fas fa-cog text-blue-600 mr-3"></i>
+<section class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-gray-200">
+    <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center">
+        <i class="fas fa-cog text-blue-600 mr-2 sm:mr-3"></i>
         Account Settings
     </h2>
 
@@ -1722,9 +1782,9 @@
 </section>
 
 <!-- C. HELP SECTION -->
-<section class="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-        <i class="fas fa-question-circle text-blue-600 mr-3"></i>
+<section class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-gray-200">
+    <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center">
+        <i class="fas fa-question-circle text-blue-600 mr-2 sm:mr-3"></i>
         Help & Support
     </h2>
     
@@ -1752,12 +1812,12 @@
 </section>
 
 <!-- D. LOG OUT SECTION -->
-<section class="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
-    <h2 class="text-2xl font-bold text-red-700 mb-4 flex items-center">
-        <i class="fas fa-sign-out-alt text-red-600 mr-3"></i>
+<section class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+    <h2 class="text-xl sm:text-2xl font-bold text-red-700 mb-3 sm:mb-4 flex items-center">
+        <i class="fas fa-sign-out-alt text-red-600 mr-2 sm:mr-3"></i>
         Account Logout
     </h2>
-    <p class="text-gray-700 mb-6">Securely log out from your instructor account when you're done working.</p>
+    <p class="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base">Securely log out from your instructor account when you're done working.</p>
     
     <form id="instructor-logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
         @csrf

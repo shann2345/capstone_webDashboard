@@ -4,11 +4,11 @@
     <div class="min-h-screen bg-gray-50">
         {{-- Header Section --}}
         <div class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div class="flex justify-between items-center">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">Student Details & Assessment Tracking</h1>
-                        <p class="text-gray-600 mt-1">
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Student Details & Assessment Tracking</h1>
+                        <p class="text-sm sm:text-base text-gray-600 mt-1">
                             @if($selectedStudent)
                                 Detailed view for {{ $selectedStudent->name }}
                             @else
@@ -16,13 +16,21 @@
                             @endif
                         </p>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <a href="{{ route('instructor.studentProgress') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+                        <a href="{{ route('instructor.studentProgress') }}" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                             </svg>
-                            Back to Progress Overview
+                            <span class="hidden sm:inline">Back to Progress Overview</span>
+                            <span class="sm:hidden">Back</span>
                         </a>
+                        <button onclick="openExportModal()" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span class="hidden sm:inline">Export Student Data</span>
+                            <span class="sm:hidden">Export</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -30,18 +38,18 @@
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {{-- Search & Filter Section --}}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
                 <form method="GET" action="{{ route('instructor.studentDetails') }}">
-                    <div class="flex flex-wrap items-center gap-4 mb-4">
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-4">
                         {{-- Search Bar --}}
-                        <div class="flex-1 min-w-64">
+                        <div class="w-full sm:flex-1 sm:min-w-64">
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
                                 </div>
-                                <input type="text" name="search" value="{{ $searchTerm ?? '' }}" placeholder="Search students by name, email, or ID..." class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                <input type="text" name="search" value="{{ $searchTerm ?? '' }}" placeholder="Search students by name, email, or ID..." class="block w-full pl-8 sm:pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm">
                             </div>
                         </div>
 
@@ -588,6 +596,108 @@
         </div>
     </div>
 
+    {{-- Export Modal --}}
+    <div id="exportModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50">
+        <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Export Student Assessment Data</h3>
+                    <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-500 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="exportForm" method="POST" action="{{ route('instructor.students.exportAssessments') }}">
+                @csrf
+                <div class="p-6">
+                    <p class="text-gray-600 mb-6">Select filters to customize your export. All your students' assessment data will be included based on the selected criteria.</p>
+                    
+                    <div class="space-y-6">
+                        {{-- Course Filter --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                            <select name="course_id" id="exportCourseSelect" onchange="updateExportSections(this.value)" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="all">All Courses</option>
+                                @foreach($courses as $course)
+                                    <option value="{{ $course->id }}">{{ $course->title }} ({{ $course->course_code }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        {{-- Section Filter --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                            <select name="section_id" id="exportSectionSelect" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="all">All Sections</option>
+                                @if(isset($sections))
+                                    @foreach($sections as $section)
+                                        <option value="{{ $section->id }}">{{ $section->name }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+                        
+                        {{-- Program Filter --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
+                            <select name="program_id" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="all">All Programs</option>
+                                @php
+                                    $programs = \App\Models\Program::all();
+                                @endphp
+                                @foreach($programs as $program)
+                                    <option value="{{ $program->id }}">{{ $program->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        {{-- Performance Status Filter --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Performance Status</label>
+                            <select name="performance_status" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="all">All Performance Levels</option>
+                                <option value="excellent">Excellent (85%+)</option>
+                                <option value="good">Good (75-84%)</option>
+                                <option value="needs-improvement">Needs Improvement (60-74%)</option>
+                                <option value="at-risk">At Risk (<60%)</option>
+                            </select>
+                        </div>
+                        
+                        {{-- Export Format Info --}}
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex">
+                                <svg class="h-5 w-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <h4 class="text-sm font-medium text-blue-800">Export Information</h4>
+                                    <p class="text-sm text-blue-700 mt-1">
+                                        The exported file will include student information, assessment details, scores, and performance levels in CSV format.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeExportModal()" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+                        <svg class="h-4 w-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- Assessment Review Modal --}}
     <div id="assessmentModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50">
         <div class="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -817,6 +927,58 @@
                     assessmentsContent.classList.remove('hidden');
                     progressContent.classList.add('hidden');
                 });
+            }
+        });
+
+        // Export Modal Functions
+        function openExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function updateExportSections(courseId) {
+            const sectionSelect = document.getElementById('exportSectionSelect');
+            
+            // Clear existing options except "All Sections"
+            sectionSelect.innerHTML = '<option value="all">All Sections</option>';
+            
+            if (courseId && courseId !== 'all') {
+                // Add sections for the selected course (you may need to pass sections data)
+                @if(isset($sections))
+                const allSections = @json($sections);
+                const courseSections = allSections.filter(section => section.course_id == courseId);
+                courseSections.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section.id;
+                    option.textContent = section.name;
+                    sectionSelect.appendChild(option);
+                });
+                @endif
+            } else {
+                // Add all sections
+                @if(isset($sections))
+                const allSections = @json($sections);
+                allSections.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section.id;
+                    option.textContent = section.name;
+                    sectionSelect.appendChild(option);
+                });
+                @endif
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('exportModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeExportModal();
             }
         });
 
@@ -1420,7 +1582,7 @@
                 
                 if (isCorrect) {
                     correctBtn.className = 'px-3 py-1 text-xs font-medium rounded-md bg-green-600 text-white transition-colors';
-                    incorrectBtn.className = 'px-3 py-1 text-xs font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-red-100 transition-colors';
+                    incorrectBtn.className = 'px-3 py-1 text-xs font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-green-100 transition-colors';
                     statusBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
                     statusBadge.textContent = 'Correct';
                 } else {

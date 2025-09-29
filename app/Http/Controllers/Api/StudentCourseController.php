@@ -118,8 +118,11 @@ class StudentCourseController extends Controller
             return response()->json(['courses' => []]);
         }
 
-        $courses = Course::where('title', 'LIKE', '%' . $query . '%')
-                         ->orWhereRaw('BINARY course_code = ?', [$query])
+        $courses = Course::where('status', 'published') // Only show published courses
+                         ->where(function($q) use ($query) {
+                             $q->where('title', 'LIKE', '%' . $query . '%')
+                               ->orWhereRaw('BINARY course_code = ?', [$query]);
+                         })
                          ->with(['program', 'instructor'])
                          ->limit(10)
                          ->get();

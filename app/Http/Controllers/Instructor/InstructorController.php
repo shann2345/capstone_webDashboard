@@ -14,6 +14,7 @@ use App\Models\Material;
 use App\Models\Course;
 use App\Models\User;
 use Illuminate\Support\Facades\log;
+use App\Exports\StudentAssessmentsExport;
 
 class InstructorController extends Controller
 {
@@ -22,6 +23,7 @@ class InstructorController extends Controller
         $instructor = Auth::user();
 
         $courses = $instructor->taughtCourses()
+            ->where('status', 'published') // Only show published courses on dashboard
             ->with(['program', 'assessments' => function ($query) {
                 $query->where('unavailable_at', '>', Carbon::now())->orderBy('unavailable_at');
             }])
@@ -971,6 +973,11 @@ class InstructorController extends Controller
             'program'
         ])->get();
 
+        // Get all sections created by this instructor
+        $sections = \App\Models\Section::where('user_id', $instructor->id)
+            ->with('course')
+            ->get();
+
         // Get all students across instructor's courses for the search table
         $allStudents = $courses->flatMap(function ($course) {
             return $course->students->map(function ($student) use ($course) {
@@ -1068,6 +1075,7 @@ class InstructorController extends Controller
 
         return view('instructor.student.studentDetails', compact(
             'courses',
+            'sections',
             'allStudents',
             'selectedStudent',
             'studentCourses',
@@ -1536,5 +1544,50 @@ class InstructorController extends Controller
                 'message' => 'Failed to update password. Please try again.'
             ], 500);
         }
+    }
+
+    public function exportStudentAssessments(Request $request)
+    {
+        $filters = $request->only(['course_id', 'section_id', 'program_id', 'performance_status']);
+        $export = new StudentAssessmentsExport($filters);
+        $data = $export->getData();
+        
+        // Generate filename based on filters
+        $filenameParts = ['student_assessments'];
+        if (!empty($filters['course_id']) && $filters['course_id'] !== 'all') {
+            $course = Course::find($filters['course_id']);
+            if ($course) $filenameParts[] = 'course_' . str_replace(' ', '_', $course->title);
+        }
+        if (!empty($filters['section_id']) && $filters['section_id'] !== 'all') {
+            $section = \App\Models\Section::find($filters['section_id']);
+            if ($section) $filenameParts[] = 'section_' . str_replace(' ', '_', $section->name);
+        }
+        $filenameParts[] = now()->format('Y-m-d');
+        $fileName = implode('_', $filenameParts) . '.csv';
+        
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            foreach ($data as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    public function archiveCourses(){
+        $instructor = Auth::user();
+        
+        // Get only archived courses for this instructor
+        $archivedCourses = $instructor->taughtCourses()
+            ->where('status', 'archived')
+            ->with(['students', 'program'])
+            ->get();
+            
+        return view('instructor.archiveCourses', compact('archivedCourses'));
     }
 }

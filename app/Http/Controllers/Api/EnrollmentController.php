@@ -19,12 +19,12 @@ class EnrollmentController extends Controller
 
         $user = Auth::user();
 
-        // Find the course by ID
+                // Find the course by ID
         $course = Course::find($request->course_id);
 
-        // Check if the course exists and if the provided course_code matches exactly (case-sensitive)
-        if (!$course || $course->course_code !== $request->course_code) {
-            return response()->json(['message' => 'Invalid course ID or incorrect course code provided.'], 404);
+        // Check if the course exists, is published, and if the provided course_code matches exactly (case-sensitive)
+        if (!$course || $course->status !== 'published' || $course->course_code !== $request->course_code) {
+            return response()->json(['message' => 'Invalid course ID, course not available, or incorrect course code provided.'], 404);
         }
 
         // Check if already enrolled
@@ -38,6 +38,12 @@ class EnrollmentController extends Controller
                 'enrollment_date' => now(), // Set enrollment date
                 'status' => 'enrolled',     // Default status
             ]);
+
+            // If the user (student) doesn't have a program_id, set it based on the course.
+            if (is_null($user->program_id) && !is_null($course->program_id)) {
+                $user->program_id = $course->program_id;
+                $user->save();
+            }
 
             return response()->json(['message' => 'Successfully enrolled in course.', 'course' => $course], 201);
         } catch (\Exception $e) {

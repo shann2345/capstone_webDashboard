@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use App\Models\Material;
 use App\Models\Assessment;
 use App\Models\Course;
+use App\Models\StudentNotification;
 use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
@@ -217,20 +218,41 @@ class ProfileController extends Controller
             
             // Get activities from the last 30 days for notifications
             $dateRange = [
-                'startDate' => Carbon::now()->subDays(30),
-                'endDate' => Carbon::now()
+                'startDate' => Carbon::now()->subDays(30)->startOfDay(),
+                'endDate' => Carbon::now()->endOfDay(),
             ];
             
             $activities = $this->getStudentActivities($enrolledCourses, $dateRange);
             
-            // Get read notifications from session
-            $readNotifications = session('read_notifications', []);
-            
-            // Add read status to each activity
-            $notifications = $activities->map(function ($activity) use ($readNotifications) {
-                $notificationId = md5($activity['type'] . $activity['description'] . $activity['date']);
-                $activity['id'] = $notificationId;
-                $activity['read'] = in_array($notificationId, $readNotifications);
+            $studentId = $student->id;
+            $activityHashes = $activities->pluck('id')->all();
+
+            // Get existing notification statuses from the database
+            $existingNotifications = StudentNotification::where('student_id', $studentId)
+                ->whereIn('notification_hash', $activityHashes)
+                ->pluck('is_read', 'notification_hash');
+
+            // Create new notifications for activities that don't have one
+            $newNotifications = [];
+            foreach ($activityHashes as $hash) {
+                if (!isset($existingNotifications[$hash])) {
+                    $newNotifications[] = [
+                        'student_id' => $studentId,
+                        'notification_hash' => $hash,
+                        'is_read' => false,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+
+            if (!empty($newNotifications)) {
+                StudentNotification::insert($newNotifications);
+            }
+
+            // Merge existing and new notification statuses
+            $notifications = $activities->map(function ($activity) use ($existingNotifications) {
+                $activity['read'] = $existingNotifications[$activity['id']] ?? false;
                 return $activity;
             });
             
@@ -238,7 +260,7 @@ class ProfileController extends Controller
             
             return response()->json([
                 'success' => true,
-                'notifications' => $notifications->values(),
+                'notifications' => $notifications,
                 'unread_count' => $unreadCount
             ]);
             
@@ -258,13 +280,12 @@ class ProfileController extends Controller
     public function markNotificationAsRead(Request $request): JsonResponse
     {
         try {
+            $student = Auth::user();
             $notificationId = $request->input('notification_id');
-            $readNotifications = session('read_notifications', []);
-            
-            if (!in_array($notificationId, $readNotifications)) {
-                $readNotifications[] = $notificationId;
-                session(['read_notifications' => $readNotifications]);
-            }
+
+            StudentNotification::where('student_id', $student->id)
+                ->where('notification_hash', $notificationId)
+                ->update(['is_read' => true, 'read_at' => now()]);
             
             return response()->json([
                 'success' => true,
@@ -283,11 +304,14 @@ class ProfileController extends Controller
     public function markAllNotificationsAsRead(Request $request): JsonResponse
     {
         try {
+            $student = Auth::user();
             $notificationIds = $request->input('notification_ids', []);
-            $readNotifications = session('read_notifications', []);
-            
-            $readNotifications = array_unique(array_merge($readNotifications, $notificationIds));
-            session(['read_notifications' => $readNotifications]);
+
+            if (!empty($notificationIds)) {
+                StudentNotification::where('student_id', $student->id)
+                    ->whereIn('notification_hash', $notificationIds)
+                    ->update(['is_read' => true, 'read_at' => now()]);
+            }
             
             return response()->json([
                 'success' => true,
@@ -331,7 +355,9 @@ class ProfileController extends Controller
         foreach ($recentMaterials as $material) {
             $courseName = $material->course ? $material->course->title : 'Course not found'; // Ensure correct course title
             $activities->push([
+                'id' => hash('sha256', 'material-' . $material->id),
                 'type' => 'material',
+                'title' => "New Material in {$courseName}",
                 'description' => "New material \"{$material->title}\" added to {$courseName}",
                 'date' => $material->created_at,
                 'course' => $courseName,
@@ -357,27 +383,18 @@ class ProfileController extends Controller
             $description = "New assessment \"{$assessment->title}\" is now available";
             
             if ($assessment->unavailable_at) {
-                $unavailableAt = Carbon::parse($assessment->unavailable_at);
-                $now = Carbon::now();
-                if ($unavailableAt > $now) {
-                    $daysLeft = $unavailableAt->diffInDays($now);
-                    if ($daysLeft == 0) {
-                        $description .= " (Due today)";
-                    } elseif ($daysLeft == 1) {
-                        $description .= " (Due tomorrow)";
-                    } else {
-                        $description .= " (Due in {$daysLeft} days)";
-                    }
-                }
+                $description .= " and is due on " . Carbon::parse($assessment->unavailable_at)->format('M d, Y h:i A');
+            } else {
+                $description .= " with no specific due date";
             }
             $description .= " in {$courseName}";
             
             $activities->push([
+                'id' => hash('sha256', 'assessment-' . $assessment->id),
                 'type' => 'assessment',
+                'title' => "New Assessment in {$courseName}",
                 'description' => $description,
-                'date' => $assessment->created_at,
-                'course' => $courseName,
-                'item_id' => $assessment->id,
+                'date' => $assessment->created_at->toIso8601String(),
                 'course_id' => $assessment->course_id,
             ]);
         }
