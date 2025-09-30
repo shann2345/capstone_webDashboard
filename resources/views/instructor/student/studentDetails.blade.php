@@ -859,7 +859,7 @@
                                    class="block w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
-                        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                        {{-- <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                             <label for="feedback" class="block text-sm font-semibold text-gray-700 mb-3">Instructor Feedback</label>
                             <textarea id="feedback" name="feedback" rows="6" 
                                       class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -872,7 +872,7 @@
                                        class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                 <label for="returnToStudent" class="text-sm font-medium text-gray-700">Return graded assessment to student with feedback</label>
                             </div>
-                        </div>
+                        </div> --}}
                     </form>
                 </div>
 

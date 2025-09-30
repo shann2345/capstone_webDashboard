@@ -28,7 +28,6 @@
                             {{-- Course Filter Dropdown --}}
                             <div class="relative">
                                 <select id="courseFilter" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="all">All Courses</option>
                                     <option value="published">Published</option>
                                     <option value="draft">Draft</option>
                                 </select>
@@ -236,7 +235,7 @@
                 
                 courseCards.forEach(card => {
                     const cardStatus = card.getAttribute('data-status');
-                    if (status === 'all' || cardStatus === status) {
+                    if (cardStatus === status) {
                         card.style.display = 'block';
                         visibleCount++;
                     } else {
@@ -307,9 +306,13 @@
             
             // Load saved filter preference
             const savedFilter = localStorage.getItem('courseFilter');
-            if (savedFilter) {
+            if (savedFilter && (savedFilter === 'published' || savedFilter === 'draft')) {
                 courseFilter.value = savedFilter;
                 filterCourses(savedFilter);
+            } else {
+                // Default to published courses
+                courseFilter.value = 'published';
+                filterCourses('published');
             }
         });
     </script>

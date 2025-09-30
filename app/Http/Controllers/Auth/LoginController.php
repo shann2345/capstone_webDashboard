@@ -54,6 +54,6 @@ class LoginController extends Controller
         $request->session()->invalidate(); // Invalidate the current session
         $request->session()->regenerateToken(); // Regenerate CSRF token for future requests
 
-        return redirect('/login'); // Redirect to login page after logout
+        return redirect('/'); // Redirect to login page after logout
     }
 }

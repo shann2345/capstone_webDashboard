@@ -2,21 +2,21 @@
 
 <x-layout>
 
-    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6">Create New Course</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Create New Course</h1>
 
     {{-- Display success message --}}
     @if (session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 sm:px-4 sm:py-3 rounded relative mb-3 sm:mb-4 text-sm sm:text-base" role="alert">
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
             <span class="block sm:inline">{{ session('success') }}</span>
         </div>
     @endif
 
     {{-- Display validation errors --}}
     @if ($errors->any())
-        <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded relative mb-3 sm:mb-4 text-sm sm:text-base" role="alert">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong class="font-bold">Whoops!</strong>
             <span class="block sm:inline">There were some problems with your input.</span>
-            <ul class="mt-2 sm:mt-3 list-disc list-inside text-xs sm:text-sm">
+            <ul class="mt-3 list-disc list-inside">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -25,24 +25,21 @@
     @endif
 
     {{-- Course Information Card --}}
-    {{-- Course Creation Form --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {{-- Form Header --}}
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-4 sm:px-6 py-4 sm:py-5">
-                <div class="flex items-center">
-                    <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 text-blue-600 rounded-full mr-3">
-                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>
-                    </div>
-                    <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Course Information</h2>
-                </div>
-            </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Course Information</h2>
+            <button type="submit" form="createCourseForm" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50" id="submitCourseButton">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Create Course
+            </button>
+        </div>
 
         <form action="{{ route('course.store') }}" method="POST" id="createCourseForm">
             @csrf
-            <div class="p-3 sm:p-4 lg:p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {{-- Course Name --}}
                     <div>
                         <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Course Name</label>
@@ -51,12 +48,17 @@
                                placeholder="Introduction to Programming" required>
                     </div>
 
-                    {{-- Course Code --}}
+                    {{-- Enrollment Key --}}
                     <div>
                         <label for="course_code" class="block text-sm font-medium text-gray-700 mb-2">Enrollment Key</label>
-                        <input type="text" id="course_code" name="course_code" value="{{ old('course_code') }}" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                               placeholder="CS101" required>
+                        <div class="relative">
+                            <input type="text" id="course_code" name="course_code" value="{{ old('course_code') }}" 
+                                   class="w-full pl-3 pr-24 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   placeholder="Enter or generate a key" required>
+                            <button type="button" id="generateKeyButton" class="absolute inset-y-0 right-0 flex items-center px-4 font-semibold text-sm text-white bg-blue-600 rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                Generate
+                            </button>
+                        </div>
                     </div>
 
                     {{-- Status --}}
@@ -70,12 +72,28 @@
                         </select>
                     </div>
 
+                    {{-- Department --}}
+                    <div>
+                        <label for="department" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                        <select id="department" name="department" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="">Select Department</option>
+                            <option value="CCS" {{ old('department') == 'CCS' ? 'selected' : '' }}>CCS - College of Computer Studies</option>
+                            <option value="CHS" {{ old('department') == 'CHS' ? 'selected' : '' }}>CHS - College of Health Sciences</option>
+                            <option value="CAS" {{ old('department') == 'CAS' ? 'selected' : '' }}>CAS - College of Arts and Sciences</option>
+                            <option value="CEA" {{ old('department') == 'CEA' ? 'selected' : '' }}>CEA - College of Engineering and Architecture</option>
+                            <option value="CTHBM" {{ old('department') == 'CTHBM' ? 'selected' : '' }}>CTHBM - College of Tourism, Hospitality and Business Management</option>
+                            <option value="CTDE" {{ old('department') == 'CTDE' ? 'selected' : '' }}>CTDE - College of Teacher Development and Education</option>
+                        </select>
+                    </div>
+
                     {{-- Program Name --}}
                     <div>
-                        <label for="program_name" class="block text-sm font-medium text-gray-700 mb-2">Program Name</label>
-                        <input type="text" id="program_name" name="program_name" value="{{ old('program_name') }}" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                               placeholder="Computer Science" required>
+                        <label for="program_name" class="block text-sm font-medium text-gray-700 mb-2">Program</label>
+                        <select id="program_name" name="program_name" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required disabled>
+                            <option value="">Select Program</option>
+                        </select>
                     </div>
 
                     {{-- Credits --}}
@@ -88,29 +106,113 @@
                 </div>
 
                 {{-- Description --}}
-                <div class="mt-4 sm:mt-6">
+                <div class="mt-6">
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                     <textarea id="description" name="description" rows="4" 
-                              class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                               placeholder="A comprehensive introduction to programming concepts using Python...">{{ old('description') }}</textarea>
-                </div>
-                
-                {{-- Submit Button --}}
-                <div class="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-center sm:justify-end gap-3">
-                    <a href="{{ route('instructor.dashboard') }}" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition-colors duration-200 text-sm sm:text-base">
-                        Cancel
-                    </a>
-                    <button type="submit" id="submitCourseButton" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 text-sm sm:text-base">
-                        Create Course
-                    </button>
                 </div>
             </div>
         </form>
     </div>
 
-
+    {{-- Cancel Link --}}
+    <div class="flex justify-center">
+        <a href="{{ route('instructor.dashboard') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+            Cancel
+        </a>
+    </div>
 
     <script>
+        // Department to Programs mapping with full names
+        const DEPT_PROGRAMS = {
+            'CCS': [
+                {code: 'BSIT', name: 'Bachelor of Science in Information Technology'},
+                {code: 'BSCS', name: 'Bachelor of Science in Computer Science'},
+                {code: 'BSIS', name: 'Bachelor of Science in Information Systems'},
+                {code: 'BLIS', name: 'Bachelor of Library and Information Science'}
+            ],
+            'CHS': [
+                {code: 'BSN', name: 'Bachelor of Science in Nursing'},
+                {code: 'BSM', name: 'Bachelor of Science in Midwifery'}
+            ],
+            'CAS': [
+                {code: 'BAELS', name: 'Bachelor of Arts in English Language Studies'},
+                {code: 'BS Math', name: 'Bachelor of Science in Mathematics'},
+                {code: 'BS Applied Math', name: 'Bachelor of Science in Applied Mathematics'},
+                {code: 'BS DevCo', name: 'Bachelor of Science in Development Communication'},
+                {code: 'BSPA', name: 'Bachelor of Science in Public Administration'},
+                {code: 'BAHS', name: 'Bachelor of Arts in History Studies'}
+            ],
+            'CEA': [
+                {code: 'BSCE', name: 'Bachelor of Science in Civil Engineering'},
+                {code: 'BSME', name: 'Bachelor of Science in Mechanical Engineering'},
+                {code: 'BSEE', name: 'Bachelor of Science in Electrical Engineering'},
+                {code: 'BSECE', name: 'Bachelor of Science in Electronics and Communications Engineering'}
+            ],
+            'CTHBM': [
+                {code: 'BSOA', name: 'Bachelor of Science in Office Administration'},
+                {code: 'BSTM', name: 'Bachelor of Science in Tourism Management'},
+                {code: 'BSHM', name: 'Bachelor of Science in Hotel Management'},
+                {code: 'BSEM', name: 'Bachelor of Science in Entrepreneurial Management'}
+            ],
+            'CTDE': [
+                {code: 'BPEd', name: 'Bachelor of Physical Education'},
+                {code: 'BCAEd', name: 'Bachelor of Culture and Arts Education'},
+                {code: 'BSNEd', name: 'Bachelor of Special Needs Education'},
+                {code: 'BTVTEd', name: 'Bachelor of Technical-Vocational Teacher Education'}
+            ]
+        };
+
+        // Handle department change
+        document.getElementById('department').addEventListener('change', function() {
+            const selectedDepartment = this.value;
+            const programSelect = document.getElementById('program_name');
+            
+            // Clear existing options
+            programSelect.innerHTML = '<option value="">Select Program</option>';
+            
+            if (selectedDepartment && DEPT_PROGRAMS[selectedDepartment]) {
+                // Enable program select
+                programSelect.disabled = false;
+                
+                // Add programs for selected department
+                DEPT_PROGRAMS[selectedDepartment].forEach(function(program) {
+                    const option = document.createElement('option');
+                    option.value = program.code; // Store only the acronym as value
+                    option.textContent = `${program.code} - ${program.name}`; // Display both acronym and full name
+                    
+                    // Check if this was the previously selected value (for old input)
+                    if (program.code === '{{ old('program_name') }}') {
+                        option.selected = true;
+                    }
+                    
+                    programSelect.appendChild(option);
+                });
+            } else {
+                // Disable program select if no department selected
+                programSelect.disabled = true;
+            }
+        });
+
+        // Initialize program dropdown if department is already selected (for old input)
+        document.addEventListener('DOMContentLoaded', function() {
+            const departmentSelect = document.getElementById('department');
+            if (departmentSelect.value) {
+                // Trigger change event to populate programs
+                departmentSelect.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Generate random enrollment key
+        document.getElementById('generateKeyButton').addEventListener('click', function() {
+            const courseCodeInput = document.getElementById('course_code');
+            // Generate a random 8-character alphanumeric string
+            const randomKey = Math.random().toString(36).substring(2, 10).toUpperCase();
+            courseCodeInput.value = randomKey;
+        });
+
+        // Form submission handling
         document.getElementById('createCourseForm').addEventListener('submit', function() {
             const submitButton = document.getElementById('submitCourseButton');
             submitButton.setAttribute('disabled', 'disabled');

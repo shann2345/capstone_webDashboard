@@ -71,7 +71,7 @@ class SocialLoginController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Google login failed: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect('/login')->with('error', 'Google sign-in failed. Please try again.');
+            return redirect('/')->with('error', 'Google sign-in failed. Please try again.');
         }
     }
 }

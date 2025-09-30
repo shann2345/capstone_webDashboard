@@ -14,6 +14,7 @@ class Course extends Model
         'course_code',
         'description',
         'credits',
+        'department',
         'program_id',
         'instructor_id',
         'status',
@@ -21,7 +22,17 @@ class Course extends Model
 
     public function program()
     {
-        return $this->belongsTo(Program::class); 
+        return $this->belongsTo(Program::class);
+    }
+
+    /**
+     * Get the program name via the relationship.
+     *
+     * @return string
+     */
+    public function getProgramNameAttribute()
+    {
+        return $this->program ? $this->program->name : null;
     }
 
     public function topics()

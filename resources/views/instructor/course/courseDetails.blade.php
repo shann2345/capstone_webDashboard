@@ -150,15 +150,36 @@
                                 </div>
                             </div>
 
+                            {{-- Department --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                <div id="department_display" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-900">
+                                    {{ $course->department ?? 'N/A' }}
+                                </div>
+                                <select id="department_input" name="department" 
+                                        class="hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                        required>
+                                    <option value="">Select Department</option>
+                                    <option value="CCS" {{ $course->department == 'CCS' ? 'selected' : '' }}>CCS - College of Computer Studies</option>
+                                    <option value="CHS" {{ $course->department == 'CHS' ? 'selected' : '' }}>CHS - College of Health Sciences</option>
+                                    <option value="CAS" {{ $course->department == 'CAS' ? 'selected' : '' }}>CAS - College of Arts and Sciences</option>
+                                    <option value="CEA" {{ $course->department == 'CEA' ? 'selected' : '' }}>CEA - College of Engineering and Architecture</option>
+                                    <option value="CTHBM" {{ $course->department == 'CTHBM' ? 'selected' : '' }}>CTHBM - College of Tourism, Hospitality and Business Management</option>
+                                    <option value="CTDE" {{ $course->department == 'CTDE' ? 'selected' : '' }}>CTDE - College of Teacher Development and Education</option>
+                                </select>
+                            </div>
+
                             {{-- Program Name --}}
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Program Name</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
                                 <div id="program_name_display" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-900">
-                                    {{ $course->program->name ?? 'N/A' }}
+                                    {{ $course->program_name ?? 'N/A' }}
                                 </div>
-                                <input type="text" id="program_name_input" name="program_name" value="{{ $course->program->name ?? '' }}" 
-                                       class="hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                       required>
+                                <select id="program_name_input" name="program_name" 
+                                        class="hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                        required>
+                                    <option value="">Select Program</option>
+                                </select>
                             </div>
 
                             {{-- Credits --}}
@@ -213,11 +234,53 @@
     @endif
 
     <script>
+        // Department to Programs mapping with full names
+        const DEPT_PROGRAMS = {
+            'CCS': [
+                {code: 'BSIT', name: 'Bachelor of Science in Information Technology'},
+                {code: 'BSCS', name: 'Bachelor of Science in Computer Science'},
+                {code: 'BSIS', name: 'Bachelor of Science in Information Systems'},
+                {code: 'BLIS', name: 'Bachelor of Library and Information Science'}
+            ],
+            'CHS': [
+                {code: 'BSN', name: 'Bachelor of Science in Nursing'},
+                {code: 'BSM', name: 'Bachelor of Science in Midwifery'}
+            ],
+            'CAS': [
+                {code: 'BAELS', name: 'Bachelor of Arts in English Language Studies'},
+                {code: 'BS Math', name: 'Bachelor of Science in Mathematics'},
+                {code: 'BS Applied Math', name: 'Bachelor of Science in Applied Mathematics'},
+                {code: 'BS DevCo', name: 'Bachelor of Science in Development Communication'},
+                {code: 'BSPA', name: 'Bachelor of Science in Public Administration'},
+                {code: 'BAHS', name: 'Bachelor of Arts in History Studies'}
+            ],
+            'CEA': [
+                {code: 'BSCE', name: 'Bachelor of Science in Civil Engineering'},
+                {code: 'BSME', name: 'Bachelor of Science in Mechanical Engineering'},
+                {code: 'BSEE', name: 'Bachelor of Science in Electrical Engineering'},
+                {code: 'BSECE', name: 'Bachelor of Science in Electronics and Communications Engineering'}
+            ],
+            'CTHBM': [
+                {code: 'BSOA', name: 'Bachelor of Science in Office Administration'},
+                {code: 'BSTM', name: 'Bachelor of Science in Tourism Management'},
+                {code: 'BSHM', name: 'Bachelor of Science in Hotel Management'},
+                {code: 'BSEM', name: 'Bachelor of Science in Entrepreneurial Management'}
+            ],
+            'CTDE': [
+                {code: 'BPEd', name: 'Bachelor of Physical Education'},
+                {code: 'BCAEd', name: 'Bachelor of Culture and Arts Education'},
+                {code: 'BSNEd', name: 'Bachelor of Special Needs Education'},
+                {code: 'BTVTEd', name: 'Bachelor of Technical-Vocational Teacher Education'}
+            ]
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             const editBtn = document.getElementById('editBtn');
             const saveBtn = document.getElementById('saveBtn');
             const cancelBtn = document.getElementById('cancelBtn');
             const form = document.getElementById('editCourseForm');
+            const departmentInput = document.getElementById('department_input');
+            const programNameInput = document.getElementById('program_name_input');
 
             // Store original values for cancel functionality
             const originalValues = {};
@@ -227,12 +290,15 @@
                 originalValues.title = document.getElementById('title_input').value;
                 originalValues.course_code = document.getElementById('course_code_input').value;
                 originalValues.status = document.getElementById('status_input').value;
-                originalValues.program_name = document.getElementById('program_name_input').value;
+                originalValues.department = departmentInput.value;
+                originalValues.program_name = '{{ $course->program_name }}'; // Store original program code
                 originalValues.credits = document.getElementById('credits_input').value;
                 originalValues.description = document.getElementById('description_input').value;
 
                 // Hide display elements and show input elements
                 toggleEditMode(true);
+                // Populate programs for the current department
+                populatePrograms(departmentInput.value, originalValues.program_name);
             });
 
             cancelBtn.addEventListener('click', function() {
@@ -240,9 +306,12 @@
                 document.getElementById('title_input').value = originalValues.title;
                 document.getElementById('course_code_input').value = originalValues.course_code;
                 document.getElementById('status_input').value = originalValues.status;
-                document.getElementById('program_name_input').value = originalValues.program_name;
+                departmentInput.value = originalValues.department;
                 document.getElementById('credits_input').value = originalValues.credits;
                 document.getElementById('description_input').value = originalValues.description;
+
+                // Restore program dropdown
+                populatePrograms(originalValues.department, originalValues.program_name);
 
                 toggleEditMode(false);
             });
@@ -254,8 +323,34 @@
                 form.submit();
             });
 
+            departmentInput.addEventListener('change', function() {
+                populatePrograms(this.value);
+            });
+
+            function populatePrograms(department, selectedProgram) {
+                programNameInput.innerHTML = '<option value="">Select Program</option>';
+                
+                if (department && DEPT_PROGRAMS[department]) {
+                    programNameInput.disabled = false;
+                    
+                    DEPT_PROGRAMS[department].forEach(function(program) {
+                        const option = document.createElement('option');
+                        option.value = program.code;
+                        option.textContent = `${program.code} - ${program.name}`;
+                        
+                        if (program.code === selectedProgram) {
+                            option.selected = true;
+                        }
+                        
+                        programNameInput.appendChild(option);
+                    });
+                } else {
+                    programNameInput.disabled = true;
+                }
+            }
+
             function toggleEditMode(isEditing) {
-                const fields = ['title', 'course_code', 'status', 'program_name', 'credits', 'description'];
+                const fields = ['title', 'course_code', 'status', 'department', 'program_name', 'credits', 'description'];
                 
                 fields.forEach(field => {
                     const display = document.getElementById(field + '_display');
