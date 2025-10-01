@@ -21,7 +21,7 @@ use App\Http\Controllers\Auth\VerificationController; // NEW: Import the new con
 
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 
-Route::post('/login', [LoginController::class, 'login']);
+Route::post('/', [LoginController::class, 'login']);
 
 Route::get('/instructor/register', [RegisterController::class, 'showInstructorRegistrationForm'])->name('instructor.register.get');
 

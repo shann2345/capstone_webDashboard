@@ -204,12 +204,42 @@
             }
         });
 
-        // Generate random enrollment key
+        // Generate course-related enrollment key
         document.getElementById('generateKeyButton').addEventListener('click', function() {
             const courseCodeInput = document.getElementById('course_code');
-            // Generate a random 8-character alphanumeric string
-            const randomKey = Math.random().toString(36).substring(2, 10).toUpperCase();
-            courseCodeInput.value = randomKey;
+            const courseTitleInput = document.getElementById('title');
+            const courseTitle = courseTitleInput.value.trim();
+            
+            let generatedKey = '';
+            
+            if (courseTitle) {
+                // Extract meaningful words from course title (remove common words)
+                const commonWords = ['and', 'of', 'the', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'a', 'an'];
+                const words = courseTitle.toLowerCase()
+                    .replace(/[^a-zA-Z\s]/g, '') // Remove special characters
+                    .split(/\s+/)
+                    .filter(word => word.length > 2 && !commonWords.includes(word));
+                
+                // Take first 2-3 significant words or first word if long enough
+                let keyBase = '';
+                if (words.length >= 2) {
+                    keyBase = words.slice(0, 2).join('');
+                } else if (words.length === 1) {
+                    keyBase = words[0];
+                } else {
+                    keyBase = courseTitle.replace(/[^a-zA-Z]/g, '').substring(0, 6);
+                }
+                
+                // Limit base to 6 characters and add random numbers
+                keyBase = keyBase.substring(0, 6);
+                const randomNumbers = Math.floor(Math.random() * 999) + 100; // 3-digit number
+                generatedKey = (keyBase + randomNumbers).toUpperCase();
+            } else {
+                // Fallback to random key if no course title
+                generatedKey = Math.random().toString(36).substring(2, 10).toUpperCase();
+            }
+            
+            courseCodeInput.value = generatedKey;
         });
 
         // Form submission handling
