@@ -22,6 +22,7 @@ class Assessment extends Model
         'unavailable_at',
         'created_by',
         'max_attempts',
+        'total_points',
     ];
 
     protected $casts = [
@@ -39,6 +40,11 @@ class Assessment extends Model
     public function questions()
     {
         return $this->hasMany(Question::class)->orderBy('order');
+    }
+    
+    public function submittedAssessments()
+    {
+        return $this->hasMany(\App\Models\SubmittedAssessment::class);
     }
     public function topic() 
     {

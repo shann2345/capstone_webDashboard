@@ -1567,6 +1567,10 @@ class InstructorController extends Controller
         
         $callback = function() use ($data) {
             $file = fopen('php://output', 'w');
+            
+            // Add BOM for proper Excel UTF-8 support
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
             foreach ($data as $row) {
                 fputcsv($file, $row);
             }
@@ -1574,7 +1578,7 @@ class InstructorController extends Controller
         };
         
         return response()->stream($callback, 200, [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ]);
     }

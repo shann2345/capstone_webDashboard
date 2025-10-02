@@ -51,22 +51,26 @@ class MaterialController extends Controller
             'topic_id' => 'nullable|exists:topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'upload_type' => 'required|in:file,link', // New field to choose between file and link
             'material_file' => [
-                'required',
+                'required_if:upload_type,file',
                 'file',
                 'max:102400', // 100MB max file size (100 * 1024 = 102400 KB)
-                function ($attribute, $value, $fail) use ($allAllowedExtensions) {
-                    $extension = strtolower($value->getClientOriginalExtension());
-                    if (!in_array($extension, $allAllowedExtensions)) {
-                        $fail('The file type is not supported. Allowed types: ' . implode(', ', $allAllowedExtensions));
+                function ($attribute, $value, $fail) use ($allAllowedExtensions, $request) {
+                    if ($request->upload_type === 'file' && $value) {
+                        $extension = strtolower($value->getClientOriginalExtension());
+                        if (!in_array($extension, $allAllowedExtensions)) {
+                            $fail('The file type is not supported. Allowed types: ' . implode(', ', $allAllowedExtensions));
+                        }
                     }
                 },
             ],
+            'material_link' => 'required_if:upload_type,link|nullable|url|max:2048', // New field for links
             'material_type' => [
                 'nullable',
                 'string',
                 Rule::in([
-                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other' // Expanded types
+                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other', 'link' // Added 'link' type
                 ]),
             ],
             'available_at' => 'nullable|date',
@@ -77,8 +81,14 @@ class MaterialController extends Controller
         $fileType = null;
         $originalFilename = null;
 
-        // 2. Handle file upload
-        if ($request->hasFile('material_file')) {
+        // 2. Handle file upload or link
+        if ($validated['upload_type'] === 'link') {
+            // Handle link upload
+            $filePath = $validated['material_link'];
+            $fileType = 'link';
+            $originalFilename = $validated['material_link']; // Store the URL as filename for consistency
+        } elseif ($request->hasFile('material_file')) {
+            // Handle file upload (existing logic)
             $file = $request->file('material_file');
             $originalFilename = $file->getClientOriginalName();
             $extension = strtolower($file->getClientOriginalExtension()); // Ensure lowercase for comparison
@@ -149,7 +159,12 @@ class MaterialController extends Controller
             return back()->with('error', 'This material is not currently available for download.');
         }
 
-        // Check if file_path exists and the file actually exists in storage
+        // Handle link materials - redirect to the URL
+        if ($material->material_type === 'link') {
+            return redirect()->away($material->file_path);
+        }
+
+        // Handle file materials - download the file
         if ($material->file_path && Storage::disk('public')->exists($material->file_path)) {
             // Return the file for download
             $file = Storage::disk('public')->path($material->file_path);
@@ -167,8 +182,11 @@ class MaterialController extends Controller
         return view('instructor.material.createMaterials', compact('course', 'material', 'topicId'));
     }
 
-    public function update(Request $request, Material $material)
+    public function update(Request $request, $id)
     {
+        // Find the material to update
+        $material = Material::findOrFail($id);
+        
         // Define allowed extensions (same as store method)
         $allowedDocumentExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'csv'];
         $allowedCodeExtensions = ['java', 'js', 'py', 'php', 'html', 'css', 'json', 'xml', 'cpp', 'c', 'h', 'hpp', 'cs', 'rb', 'go', 'swift', 'kt', 'scala', 'r', 'sql', 'sh', 'bat', 'ps1', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf', 'md', 'rst', 'tex'];
@@ -193,12 +211,13 @@ class MaterialController extends Controller
             'topic_id' => 'nullable|exists:topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'upload_type' => 'required|in:file,link', // New field to choose between file and link
             'material_file' => [
                 'nullable', // File is optional for updates
                 'file',
                 'max:102400', // 100MB max file size
-                function ($attribute, $value, $fail) use ($allAllowedExtensions) {
-                    if ($value) { // Only validate if file is provided
+                function ($attribute, $value, $fail) use ($allAllowedExtensions, $request) {
+                    if ($value && $request->upload_type === 'file') { // Only validate if file is provided and upload_type is file
                         $extension = strtolower($value->getClientOriginalExtension());
                         if (!in_array($extension, $allAllowedExtensions)) {
                             $fail('The file type is not supported. Allowed types: ' . implode(', ', $allAllowedExtensions));
@@ -206,21 +225,33 @@ class MaterialController extends Controller
                     }
                 },
             ],
+            'material_link' => 'required_if:upload_type,link|nullable|url|max:2048', // New field for links
             'material_type' => [
                 'nullable',
                 'string',
                 Rule::in([
-                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other'
+                    'pdf', 'document', 'video', 'audio', 'image', 'code', 'archive', 'executable', 'other', 'link'
                 ]),
             ],
             'available_at' => 'nullable|date',
             'unavailable_at' => 'nullable|date|after_or_equal:available_at',
         ]);
 
-        // Handle file upload if new file is provided
-        if ($request->hasFile('material_file')) {
+        // Handle file upload or link if new content is provided
+        if ($validated['upload_type'] === 'link') {
+            // Handle link update
+            // Delete old file if it exists (when switching from file to link)
+            if ($material->material_type !== 'link' && $material->file_path && Storage::disk('public')->exists($material->file_path)) {
+                Storage::disk('public')->delete($material->file_path);
+            }
+            
+            $material->file_path = $validated['material_link'];
+            $material->material_type = 'link';
+            $material->original_filename = $validated['material_link'];
+        } elseif ($request->hasFile('material_file')) {
+            // Handle file upload (existing logic)
             // Delete old file if it exists
-            if ($material->file_path && Storage::disk('public')->exists($material->file_path)) {
+            if ($material->file_path && $material->material_type !== 'link' && Storage::disk('public')->exists($material->file_path)) {
                 Storage::disk('public')->delete($material->file_path);
             }
 

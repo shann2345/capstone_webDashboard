@@ -24,7 +24,7 @@ class SubmittedAssessment extends Model
     ];
 
     protected $casts = [
-        'score' => 'decimal:2',
+        'score' => 'integer',
         'submitted_at' => 'datetime',
         'started_at' => 'datetime', 
         'completed_at' => 'datetime',

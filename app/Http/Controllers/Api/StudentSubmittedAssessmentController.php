@@ -615,110 +615,53 @@ class StudentSubmittedAssessmentController extends Controller
     }
     public function finalizeQuizAttempt(SubmittedAssessment $submittedAssessment)
     {
-        $user = Auth::user();
-        if ($submittedAssessment->student_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized to finalize this assessment.'], 403);
+        if ($submittedAssessment->status !== 'in-progress') {
+            return response()->json(['message' => 'This quiz attempt has already been completed or was not started.'], 400);
         }
 
-        if ($submittedAssessment->status !== 'in_progress') {
-            return response()->json(['message' => 'This assessment has already been finalized.'], 400);
-        }
+        $totalPoints = 0;
 
-        DB::beginTransaction();
+        DB::transaction(function () use ($submittedAssessment, &$totalPoints) {
+            $submittedAssessment->load('submittedQuestions.originalQuestion');
 
-        try {
-            $totalScore = 0;
-            
-            // Eager load the necessary relationships to avoid N+1 queries
-            $submittedQuestions = $submittedAssessment->submittedQuestions()->with([
-                'question.options',
-                'submittedOptions'
-            ])->get();
+            foreach ($submittedAssessment->submittedQuestions as $submittedQuestion) {
+                $originalQuestion = $submittedQuestion->originalQuestion;
+                if (!$originalQuestion) continue;
 
-            foreach ($submittedQuestions as $submittedQuestion) {
                 $isCorrect = false;
-                $scoreEarned = 0;
-                $questionType = $submittedQuestion->question_type;
-                
-                $originalQuestion = $submittedQuestion->question;
-
-                if ($questionType === 'multiple_choice') {
-                    // For multiple choice, check if selected option's order matches correct_answer
-                    $selectedOptions = $submittedQuestion->submittedOptions()
-                        ->where('is_selected', true)
-                        ->get();
-
-                    if ($selectedOptions->isNotEmpty()) {
-                        foreach ($selectedOptions as $selectedOption) {
-                            $questionOption = QuestionOption::find($selectedOption->question_option_id);
-                            if ($questionOption && $questionOption->option_order == $originalQuestion->correct_answer) {
-                                $isCorrect = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if ($isCorrect) {
-                        $scoreEarned = $submittedQuestion->max_points;
-                    }
-
-                } elseif ($questionType === 'true_false') {
-                    // For true/false, use multiple validation approaches
-                    $isCorrect = $this->validateTrueFalseAnswer($submittedQuestion, $originalQuestion);
-                    
-                    if ($isCorrect) {
-                        $scoreEarned = $submittedQuestion->max_points;
-                    }
-
-                } elseif (in_array($questionType, ['short_answer', 'identification'])) {
-                    // Simple case-insensitive string comparison
-                    if ($submittedQuestion->submitted_answer && $originalQuestion->correct_answer) {
-                        $isCorrect = strtolower(trim($submittedQuestion->submitted_answer)) === strtolower(trim($originalQuestion->correct_answer));
-                    }
-                    
-                    if ($isCorrect) {
-                        $scoreEarned = $submittedQuestion->max_points;
-                    }
-
-                } else {
-                    // For question types that require manual grading (e.g., essay), score is 0 initially.
-                    $scoreEarned = 0;
+                switch ($originalQuestion->question_type) {
+                    case 'multiple_choice':
+                    case 'true_false':
+                        $isCorrect = $this->validateMultipleChoiceAnswer($submittedQuestion, $originalQuestion);
+                        break;
+                    case 'multiple_answer':
+                        $isCorrect = $this->validateMultipleAnswer($submittedQuestion, $originalQuestion);
+                        break;
+                    case 'short_answer':
+                        $isCorrect = $this->validateShortAnswer($submittedQuestion, $originalQuestion);
+                        break;
                 }
 
-                // Update the submitted question record with the calculated score and correctness
-                $submittedQuestion->update([
-                    'is_correct' => $isCorrect ? 1 : 0,
-                    'score_earned' => $scoreEarned
-                ]);
-                
-                $totalScore += $scoreEarned;
+                if ($isCorrect) {
+                    $totalPoints += $originalQuestion->points ?? 0;
+                }
             }
 
-            // Update the submitted assessment status and final score
-            $submittedAssessment->update([
-                'score' => $totalScore,
-                'status' => 'completed',
-                'submitted_at' => now(),
-                'completed_at' => now(),
-            ]);
+            $submittedAssessment->score = $totalPoints;
+            $submittedAssessment->status = 'completed';
+            $submittedAssessment->completed_at = now();
+            $submittedAssessment->save();
+        });
 
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Quiz completed successfully!',
-                'submitted_assessment' => $submittedAssessment->fresh(['submittedQuestions.submittedOptions'])
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error finalizing quiz attempt: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['message' => 'Failed to finalize quiz. Please try again.'], 500);
-        }
+        return response()->json([
+            'message' => 'Quiz finalized successfully.',
+            'score' => $totalPoints,
+            'submitted_assessment' => $submittedAssessment
+        ]);
     }
 
-    private function validateTrueFalseAnswer($submittedQuestion, $originalQuestion)
+    private function validateMultipleChoiceAnswer($submittedQuestion, $originalQuestion)
     {
-        // Strategy 1: Check selected options (if using option-based true/false)
         $selectedOptions = $submittedQuestion->submittedOptions()
             ->where('is_selected', true)
             ->get();
@@ -732,52 +675,33 @@ class StudentSubmittedAssessmentController extends Controller
             }
         }
 
-        // Strategy 2: Check submitted_answer text directly
-        if ($submittedQuestion->submitted_answer && $originalQuestion->correct_answer) {
-            $submittedAnswer = strtolower(trim($submittedQuestion->submitted_answer));
-            $correctAnswer = strtolower(trim($originalQuestion->correct_answer));
-            
-            // Direct text comparison
-            if ($submittedAnswer === $correctAnswer) {
-                return true;
-            }
-
-            // Handle common true/false variations
-            $trueVariations = ['true', 't', '1', 'yes', 'correct'];
-            $falseVariations = ['false', 'f', '0', 'no', 'incorrect'];
-            
-            $isSubmittedTrue = in_array($submittedAnswer, $trueVariations);
-            $isSubmittedFalse = in_array($submittedAnswer, $falseVariations);
-            $isCorrectTrue = in_array($correctAnswer, $trueVariations);
-            $isCorrectFalse = in_array($correctAnswer, $falseVariations);
-            
-            if (($isSubmittedTrue && $isCorrectTrue) || ($isSubmittedFalse && $isCorrectFalse)) {
-                return true;
-            }
-
-            // Strategy 3: If correct_answer is numeric (option_order), match with option text
-            if (is_numeric($correctAnswer)) {
-                $correctOption = QuestionOption::where('question_id', $originalQuestion->id)
-                    ->where('option_order', $correctAnswer)
-                    ->first();
-                
-                if ($correctOption) {
-                    $correctOptionText = strtolower(trim($correctOption->option_text));
-                    if ($submittedAnswer === $correctOptionText) {
-                        return true;
-                    }
-                    
-                    // Check if option text matches true/false variations
-                    if (($isSubmittedTrue && in_array($correctOptionText, $trueVariations)) ||
-                        ($isSubmittedFalse && in_array($correctOptionText, $falseVariations))) {
-                        return true;
-                    }
-                }
-            }
-        }
-
         return false;
     }
+
+    private function validateMultipleAnswer($submittedQuestion, $originalQuestion)
+    {
+        $selectedOptions = $submittedQuestion->submittedOptions()
+            ->where('is_selected', true)
+            ->get();
+
+        // For multiple answer, all correct options must be selected
+        $correctOptions = QuestionOption::where('question_id', $originalQuestion->id)
+                                        ->where('is_correct', true)
+                                        ->get();
+
+        return $selectedOptions->count() === $correctOptions->count() && $selectedOptions->every(function ($option) use ($correctOptions) {
+            return $correctOptions->contains('id', $option->question_option_id);
+        });
+    }
+
+    private function validateShortAnswer($submittedQuestion, $originalQuestion)
+    {
+        $submittedAnswer = strtolower(trim($submittedQuestion->submitted_answer));
+        $correctAnswer = strtolower(trim($originalQuestion->correct_answer));
+
+        return $submittedAnswer === $correctAnswer;
+    }
+
     public function getAttemptStatus(Assessment $assessment)
     {
         $user = Auth::user();

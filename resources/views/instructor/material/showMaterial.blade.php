@@ -40,13 +40,24 @@
                     </a>
                     
                     @if ($material->file_path)
-                        <a href="{{ route('materials.download', $material->id) }}" 
-                           class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium text-white transition-all duration-200 shadow-lg">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            Download
-                        </a>
+                        @if ($material->material_type === 'link')
+                            <a href="{{ route('materials.download', $material->id) }}" 
+                               target="_blank"
+                               class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium text-white transition-all duration-200 shadow-lg">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                Open Link
+                            </a>
+                        @else
+                            <a href="{{ route('materials.download', $material->id) }}" 
+                               class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium text-white transition-all duration-200 shadow-lg">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Download
+                            </a>
+                        @endif
                     @endif
                 </div>
             </div>
@@ -87,11 +98,38 @@
                         @if ($material->file_path)
                             <div class="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50">
                                 @php
-                                    $fileExtension = pathinfo($material->file_path, PATHINFO_EXTENSION);
                                     $materialType = $material->material_type ?? '';
+                                    $fileExtension = pathinfo($material->file_path, PATHINFO_EXTENSION);
                                 @endphp
 
-                                @if (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'svg']))
+                                @if ($materialType === 'link')
+                                    {{-- Handle Link Materials --}}
+                                    <div class="p-8 text-center">
+                                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-700 mb-4">External Link</h3>
+                                        <div class="bg-white rounded-lg p-4 mb-6 border">
+                                            <p class="text-sm text-gray-600 mb-2">Link URL:</p>
+                                            <a href="{{ $material->file_path }}" target="_blank" 
+                                               class="text-blue-600 hover:text-blue-800 underline break-all text-sm">
+                                                {{ $material->file_path }}
+                                            </a>
+                                        </div>
+                                        <div class="flex justify-center gap-4">
+                                            <a href="{{ route('materials.download', $material->id) }}"
+                                               target="_blank"
+                                               class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-lg">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                                </svg>
+                                                Open Link
+                                            </a>
+                                        </div>
+                                    </div>
+                                @elseif (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'svg']))
                                     <div class="p-6 text-center">
                                         <img src="{{ asset('storage/' . $material->file_path) }}" 
                                              alt="{{ $material->title }}" 

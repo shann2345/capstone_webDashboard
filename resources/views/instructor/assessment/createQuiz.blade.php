@@ -92,6 +92,23 @@
 
                         <div id="quizSpecificSection" class="mt-6 p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
                             <h2 class="text-xl font-semibold text-gray-800 mb-4">{{ ucfirst($assessment->type ?? $assessmentType) }} Settings</h2>
+                            
+                            {{-- Total Points Field - Optional for quizzes --}}
+                            <div class="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
+                                <label for="total_points" class="block text-gray-700 text-sm font-bold mb-2">
+                                    Override Total Points (Optional)
+                                </label>
+                                <input type="number" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('total_points') border-red-500 @enderror"
+                                       id="total_points" name="total_points" value="{{ old('total_points', $assessment->total_points ?? '') }}" min="1">
+                                <p class="text-blue-600 text-xs italic mt-1">
+                                    <strong>Leave empty to auto-calculate:</strong> Total points will be automatically calculated from the sum of all question points. 
+                                    Only set this if you want to override the automatic calculation.
+                                </p>
+                                @error('total_points')
+                                    <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="mb-4">
                                     <label for="duration_minutes" class="block text-gray-700 text-sm font-bold mb-2">Duration in Minutes (Optional):</label>
@@ -115,8 +132,34 @@
                             </div>
                         </div>
 
+                        {{-- Aiken Format Upload Section --}}
+                        <div id="aikenUploadSection" class="mt-6 p-6 border border-green-200 rounded-lg bg-green-50 shadow-sm">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Import Questions from Aiken Format</h2>
+                            <p class="text-sm text-gray-600 mb-4">
+                                Upload a text file in Aiken format to quickly import multiple choice questions. 
+                                <a href="#" id="aikenFormatExample" class="text-blue-600 hover:text-blue-800 underline">View format example</a>
+                            </p>
+                            
+                            <div class="mb-4">
+                                <label for="aiken_file" class="block text-gray-700 text-sm font-bold mb-2">Aiken Format File (.txt):</label>
+                                <input type="file" id="aiken_file" name="aiken_file" accept=".txt" 
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                                <p class="text-gray-500 text-xs italic mt-1">Select a .txt file containing questions in Aiken format</p>
+                            </div>
+                            
+                            <button type="button" id="importAikenButton" class="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                Import Questions
+                            </button>
+                            
+                            <div id="aikenPreview" class="mt-4 hidden">
+                                <h4 class="text-md font-semibold text-gray-700 mb-2">Preview:</h4>
+                                <div id="aikenPreviewContent" class="bg-white p-4 rounded border max-h-48 overflow-y-auto text-sm"></div>
+                            </div>
+                        </div>
+
                         <div id="questionBuilderSection" class="mt-6 p-6 border border-blue-200 rounded-lg bg-blue-50 shadow-sm">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Online {{ ucfirst($assessment->type ?? $assessmentType) }} Questions</h2>
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Manual Question Builder</h2>
                             <p class="text-sm text-gray-600 mb-4">
                                 Build your questions directly here. You can add multiple choice, identification, or true/false questions.
                             </p>
@@ -170,6 +213,55 @@
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Aiken Format Example Modal --}}
+    <div id="aikenExampleModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Aiken Format Example</h3>
+                <button type="button" id="closeAikenModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap mb-4">What is the capital of France?
+A. London
+B. Berlin
+C. Paris
+D. Madrid
+ANSWER: C
+
+Which programming language is used for web development?
+A. Python
+B. JavaScript
+C. Java
+D. C++
+ANSWER: B
+
+What does HTML stand for?
+A. Hyper Text Markup Language
+B. High Tech Modern Language
+C. Home Tool Markup Language
+D. Hyperlink and Text Markup Language
+ANSWER: A</div>
+            <div class="text-sm text-gray-600">
+                <p class="mb-2"><strong>Format Rules:</strong></p>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>Each question starts with the question text</li>
+                    <li>Options are listed with A., B., C., D., etc.</li>
+                    <li>The correct answer is specified with "ANSWER: [letter]"</li>
+                    <li>Leave a blank line between questions</li>
+                    <li>Questions will be imported with 1 point each (you can modify later)</li>
+                </ul>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button type="button" id="closeAikenModalBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                    Close
+                </button>
             </div>
         </div>
     </div>
@@ -282,6 +374,127 @@
                 const progressText = document.getElementById('progressText');
                 const formErrorsDiv = document.getElementById('form-errors');
                 const errorList = document.getElementById('error-list');
+
+                // Aiken Format Handler
+                const aikenFileInput = document.getElementById('aiken_file');
+                const importAikenButton = document.getElementById('importAikenButton');
+                const aikenPreview = document.getElementById('aikenPreview');
+                const aikenPreviewContent = document.getElementById('aikenPreviewContent');
+                const aikenExampleModal = document.getElementById('aikenExampleModal');
+                const aikenFormatExample = document.getElementById('aikenFormatExample');
+                const closeAikenModal = document.getElementById('closeAikenModal');
+                const closeAikenModalBtn = document.getElementById('closeAikenModalBtn');
+
+                // Show Aiken example modal
+                aikenFormatExample.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    aikenExampleModal.classList.remove('hidden');
+                });
+
+                // Close Aiken example modal
+                [closeAikenModal, closeAikenModalBtn].forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        aikenExampleModal.classList.add('hidden');
+                    });
+                });
+
+                // Enable import button when file is selected
+                aikenFileInput.addEventListener('change', function() {
+                    importAikenButton.disabled = !this.files.length;
+                    if (this.files.length) {
+                        previewAikenFile(this.files[0]);
+                    } else {
+                        aikenPreview.classList.add('hidden');
+                    }
+                });
+
+                // Preview Aiken file content
+                function previewAikenFile(file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const preview = content.length > 500 ? content.substring(0, 500) + '\n...[truncated]' : content;
+                        aikenPreviewContent.textContent = preview;
+                        aikenPreview.classList.remove('hidden');
+                    };
+                    reader.readAsText(file);
+                }
+
+                // Import Aiken questions
+                importAikenButton.addEventListener('click', function() {
+                    const file = aikenFileInput.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const questions = parseAikenFormat(content);
+                        
+                        if (questions.length === 0) {
+                            alert('No valid questions found in the file. Please check the format.');
+                            return;
+                        }
+
+                        // Add parsed questions to the form
+                        questions.forEach(questionData => {
+                            addQuestion(questionData);
+                        });
+
+                        // Clear the file input and hide preview
+                        aikenFileInput.value = '';
+                        aikenPreview.classList.add('hidden');
+                        importAikenButton.disabled = true;
+
+                        alert(`Successfully imported ${questions.length} question(s) from Aiken format.`);
+                    };
+                    reader.readAsText(file);
+                });
+
+                // Parse Aiken format
+                function parseAikenFormat(content) {
+                    const questions = [];
+                    const questionBlocks = content.trim().split(/\n\s*\n/); // Split by double newlines
+
+                    questionBlocks.forEach(block => {
+                        const lines = block.trim().split('\n').filter(line => line.trim());
+                        if (lines.length < 3) return; // Need at least question, one option, and answer
+
+                        let questionText = '';
+                        const options = [];
+                        let correctAnswer = '';
+
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line.match(/^[A-Z]\.\s*/)) {
+                                // This is an option
+                                const optionText = line.replace(/^[A-Z]\.\s*/, '');
+                                options.push(optionText);
+                            } else if (line.match(/^ANSWER:\s*[A-Z]$/i)) {
+                                // This is the answer
+                                const answerLetter = line.replace(/^ANSWER:\s*/i, '').toUpperCase();
+                                const answerIndex = answerLetter.charCodeAt(0) - 65; // Convert A=0, B=1, etc.
+                                correctAnswer = answerIndex.toString();
+                            } else if (!questionText && !line.match(/^[A-Z]\.\s*/) && !line.match(/^ANSWER:/i)) {
+                                // This is the question text
+                                questionText = line;
+                            }
+                        }
+
+                        // Validate we have all required components
+                        if (questionText && options.length >= 2 && correctAnswer !== '' && parseInt(correctAnswer) < options.length) {
+                            questions.push({
+                                question_text: questionText,
+                                question_type: 'multiple_choice',
+                                points: 1,
+                                options: options,
+                                correct_answer: correctAnswer
+                            });
+                        }
+                    });
+
+                    return questions;
+                }
 
                 // --- NEW FUNCTION FOR VALIDATION ---
                 function validateMultipleChoiceOptions() {
@@ -453,7 +666,7 @@
                     // Capture current index for this question (now based on its actual position)
                     const currentQuestionIndex = questionCounter;
 
-                    // Pre-fill question data if provided (for editing)
+                    // Pre-fill question data if provided (for editing or Aiken import)
                     if (questionData) {
                         // Set question ID if it's an existing question
                         if (questionData.id) {
@@ -473,26 +686,31 @@
                                 // Clear default options from template (if any were initially added by template)
                                 optionsContainer.innerHTML = '';
 
+                                // Handle both existing questions (with option objects) and Aiken imports (with option arrays)
                                 if (questionData.options && questionData.options.length > 0) {
-                                    // Sort options by option_order to maintain consistency
-                                    questionData.options.sort((a, b) => a.option_order - b.option_order);
-                                    questionData.options.forEach((option, optIdx) => {
-                                        addMultipleChoiceOption(questionSpecificFields, currentQuestionIndex, option.option_text, optIdx, option.id); // Pass option ID
-                                    });
+                                    if (Array.isArray(questionData.options) && typeof questionData.options[0] === 'string') {
+                                        // This is an Aiken import - options are strings
+                                        questionData.options.forEach((optionText, optIdx) => {
+                                            addMultipleChoiceOption(questionSpecificFields, currentQuestionIndex, optionText, optIdx, null);
+                                        });
+                                    } else {
+                                        // This is existing question data - options are objects
+                                        questionData.options.sort((a, b) => a.option_order - b.option_order);
+                                        questionData.options.forEach((option, optIdx) => {
+                                            addMultipleChoiceOption(questionSpecificFields, currentQuestionIndex, option.option_text, optIdx, option.id);
+                                        });
+                                    }
                                 }
+                                
                                 // Select correct answer
-                                // Note: correct_answer for MC stores the *index* of the correct option
                                 const mcCorrectRadio = questionSpecificFields.querySelector(`input[name="questions[${currentQuestionIndex}][correct_answer]"][value="${questionData.correct_answer}"]`);
                                 if (mcCorrectRadio) {
                                     mcCorrectRadio.checked = true;
                                 } else {
                                     // Fallback if the correct_answer index is somehow invalid or not found
-                                    // This might happen if options were deleted or reordered and correct_answer wasn't re-indexed on backend
-                                    // For robustness, you might select the first option or show an alert.
-                                    // For now, let's ensure the radio button's value matches the correct_answer string.
                                     const allMCRadios = questionSpecificFields.querySelectorAll(`input[name="questions[${currentQuestionIndex}][correct_answer]"]`);
                                     for (let i = 0; i < allMCRadios.length; i++) {
-                                        if (allMCRadios[i].value == questionData.correct_answer) { // Use == for loose comparison as value might be string
+                                        if (allMCRadios[i].value == questionData.correct_answer) {
                                             allMCRadios[i].checked = true;
                                             break;
                                         }

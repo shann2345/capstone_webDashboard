@@ -175,6 +175,15 @@
                             </div>
                         </div>
                         <div class="p-6 space-y-4">
+                            {{-- Total Points Display --}}
+                            <div class="flex items-start">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Total Points</p>
+                                    <p class="text-sm text-gray-600 font-semibold">{{ $assessment->total_points ?? 100 }} points</p>
+                                </div>
+                            </div>
+
                             @if($assessment->duration_minutes)
                                 <div class="flex items-start">
                                     <div class="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>

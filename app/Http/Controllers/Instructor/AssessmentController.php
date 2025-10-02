@@ -35,8 +35,10 @@ class AssessmentController extends Controller
             'duration_minutes' => 'nullable|integer|min:0',
             'access_code' => 'nullable|string|max:255',
             'assessment_file' => 'nullable|file|max:20480', // 20MB
+            'aiken_file' => 'nullable|file|mimes:txt|max:2048', // 2MB for Aiken text files
             'available_at' => 'nullable|date',
             'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+            'total_points' => 'nullable|integer|min:1', // Optional for quizzes
             'questions' => 'nullable|array',
             'questions.*.question_type' => 'required_with:questions|string|in:multiple_choice,identification,true_false,essay',
             'questions.*.question_text' => 'required_with:questions|string',
@@ -55,7 +57,7 @@ class AssessmentController extends Controller
         $availableAt = $validated['available_at'] ? Carbon::parse($validated['available_at'], $localTimezone)->setTimezone('UTC') : null;
         $unavailableAt = $validated['unavailable_at'] ? Carbon::parse($validated['unavailable_at'], $localTimezone)->setTimezone('UTC') : null;
 
-        // Create the assessment
+        // Create the assessment (without total_points initially if it should be auto-calculated)
         $assessment = \App\Models\Assessment::create([
             'course_id' => $courseId,
             'topic_id' => $validated['topic_id'] ?? null,
@@ -67,6 +69,7 @@ class AssessmentController extends Controller
             'access_code' => $validated['access_code'] ?? null,
             'available_at' => $availableAt,
             'unavailable_at' => $unavailableAt,
+            'total_points' => $validated['total_points'], // Will be updated later if null
             'created_by' => Auth::id(),
         ]);
 
@@ -87,44 +90,33 @@ class AssessmentController extends Controller
                     $question->correct_answer = $q['correct_answer'];
                         $question->save();
 
-                    // Save options
-                    if (isset($q['options']) && is_array($q['options'])) {
-                        foreach ($q['options'] as $opt) {
-                            if (!empty($opt['option_text'])) {
+                        // Handle multiple choice options
+                        if (isset($q['options']) && is_array($q['options'])) {
+                            foreach ($q['options'] as $optionOrder => $optionData) {
                                 \App\Models\QuestionOption::create([
                                     'question_id' => $question->id,
-                                    'option_text' => $opt['option_text'],
-                                    'option_order' => $opt['option_order'],
+                                    'option_text' => $optionData['option_text'],
+                                    'option_order' => $optionOrder,
                                 ]);
                             }
                         }
+                    } else {
+                        // For identification, true_false, essay
+                        if (isset($q['correct_answer'])) {
+                            $question->correct_answer = $q['correct_answer'];
+                        }
+                        $question->save();
                     }
-                } elseif ($q['question_type'] === 'identification') {
-                    $question->correct_answer = $q['correct_answer'];
-                    $question->save();
-                } elseif ($q['question_type'] === 'true_false') {
-                    $question->correct_answer = $q['correct_answer']; // 'true' or 'false'
-                    $question->save();
-                    
-                    // Create 'True' and 'False' options for the true/false question
-                    \App\Models\QuestionOption::create([
-                        'question_id' => $question->id,
-                        'option_text' => 'True',
-                        'option_order' => 0,
-                    ]);
-                    \App\Models\QuestionOption::create([
-                        'question_id' => $question->id,
-                        'option_text' => 'False',
-                        'option_order' => 1,
-                    ]);
-
-                } else {
-                    $question->save();
-                }
             }
-        }
-
-        return response()->json(['success' => true, 'redirect' => route('courses.show', $courseId)]);
+            
+            // Auto-calculate total_points if not explicitly set for quiz/exam types
+            if (is_null($validated['total_points']) && in_array(strtolower($request->input('type', 'quiz')), ['quiz', 'exam'])) {
+                $calculatedPoints = $assessment->questions()->sum('points');
+                $assessment->update([
+                    'total_points' => $calculatedPoints > 0 ? $calculatedPoints : 100
+                ]);
+            }
+        }        return response()->json(['success' => true, 'redirect' => route('courses.show', $courseId)]);
     }
 
     public function editQuiz(Course $course, Assessment $assessment)
@@ -167,8 +159,10 @@ class AssessmentController extends Controller
                 'description' => 'nullable|string',
                 'duration_minutes' => 'nullable|integer|min:0',
                 'access_code' => 'nullable|string|max:255',
+                'aiken_file' => 'nullable|file|mimes:txt|max:2048', // 2MB for Aiken text files
                 'available_at' => 'nullable|date',
                 'unavailable_at' => 'nullable|date|after_or_equal:available_at',
+                'total_points' => 'nullable|integer|min:1', // Optional for quizzes
                 'questions' => 'nullable|array',
                 'questions.*.id' => 'nullable|exists:questions,id', // For existing questions
                 'questions.*.question_text' => 'required|string',
@@ -216,6 +210,7 @@ class AssessmentController extends Controller
                 'access_code' => $validatedData['access_code'] ?? null,
                 'available_at' => $availableAt,
                 'unavailable_at' => $unavailableAt,
+                'total_points' => $validatedData['total_points'] ?? null, // Optional for quizzes
             ])->save();
 
 
@@ -270,6 +265,15 @@ class AssessmentController extends Controller
                     $question->options()->delete();
                 }
             }
+            
+            // Auto-calculate total_points if not explicitly set for quiz/exam types
+            if (is_null($validatedData['total_points']) && in_array(strtolower($assessment->type), ['quiz', 'exam'])) {
+                $calculatedPoints = $assessment->questions()->sum('points');
+                $assessment->update([
+                    'total_points' => $calculatedPoints > 0 ? $calculatedPoints : 100
+                ]);
+            }
+            
             DB::commit();
             return response()->json(['success' => true, 'redirect' => route('courses.show', $course->id)]);
         } catch (ValidationException $e) {
@@ -331,6 +335,7 @@ class AssessmentController extends Controller
                 'unavailable_at' => 'nullable|date|after_or_equal:available_at', // Fixed typo here
                 'duration_minutes' => 'nullable|integer|min:0', // Added for assignments/activities/projects
                 'access_code' => 'nullable|string|max:255', // Added for assignments/activities/projects
+                'total_points' => 'required|integer|min:1', // Required for assignments
             ]);
 
             // For assignment/activity, if no description, then file is required
@@ -362,6 +367,7 @@ class AssessmentController extends Controller
                 'assessment_file_path' => $assessmentFilePath,
                 'duration_minutes' => $validatedAssessmentData['duration_minutes'] ?? null, // Now included
                 'access_code' => $validatedAssessmentData['access_code'] ?? null, // Now included
+                'total_points' => $validatedAssessmentData['total_points'], // Required for assignments
                 'available_at' => $availableAt,
                 'unavailable_at' => $unavailableAt,
                 'created_by' => Auth::id(),
@@ -421,6 +427,7 @@ class AssessmentController extends Controller
                 'duration_minutes' => 'nullable|integer|min:0',
                 'access_code' => 'nullable|string|max:255',
                 'topic_id' => 'nullable|exists:topics,id',
+                'total_points' => 'required|integer|min:1', // Required for assignments
             ]);
 
             // For assignment/activity, if no description AND no existing file AND no new file, then file is required
@@ -460,6 +467,7 @@ class AssessmentController extends Controller
                 'access_code' => $validatedData['access_code'] ?? null,
                 'available_at' => $availableAt,
                 'unavailable_at' => $unavailableAt,
+                'total_points' => $validatedData['total_points'], // Required for assignments
             ])->save();
 
             DB::commit();

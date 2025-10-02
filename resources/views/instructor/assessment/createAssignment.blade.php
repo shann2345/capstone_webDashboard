@@ -118,7 +118,21 @@
                         </div>
 
                         <div class="mt-6 p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Optional Settings</h2>
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Assessment Settings</h2>
+                            
+                            {{-- Total Points Field - Required for assignments --}}
+                            <div class="mb-6">
+                                <label for="total_points" class="block text-gray-700 text-sm font-bold mb-2">
+                                    Total Points <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('total_points') border-red-500 @enderror"
+                                       id="total_points" name="total_points" value="{{ old('total_points', $assessment->total_points ?? '100') }}" min="1" required>
+                                <p class="text-gray-500 text-xs italic mt-1">Set the maximum points for this {{ $assessment->type ?? $assessmentType }}.</p>
+                                @error('total_points')
+                                    <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div>
                                     <label for="duration_minutes" class="block text-gray-700 text-sm font-bold mb-2">Duration in Minutes (Optional):</label>

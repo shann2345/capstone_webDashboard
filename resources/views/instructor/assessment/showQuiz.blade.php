@@ -86,6 +86,28 @@
 
                 {{-- Assessment Details --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {{-- Total Points Display --}}
+                    @php
+                        $totalPoints = $assessment->total_points;
+                        $calculatedPoints = $assessment->questions->sum('points');
+                        $isOverride = !is_null($totalPoints) && $totalPoints > 0;
+                        $displayPoints = $isOverride ? $totalPoints : ($calculatedPoints > 0 ? $calculatedPoints : 100);
+                    @endphp
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-purple-900">Total Points</span>
+                        </div>
+                        <p class="text-lg font-semibold text-purple-900 mt-1">{{ $displayPoints }} points</p>
+                        @if($isOverride)
+                            <p class="text-xs text-purple-600 mt-1">Custom override</p>
+                        @else
+                            <p class="text-xs text-purple-600 mt-1">Auto-calculated</p>
+                        @endif
+                    </div>
+
                     @if($assessment->duration_minutes)
                         <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
                             <div class="flex items-center">
