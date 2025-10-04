@@ -105,6 +105,15 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
                                     </button>
+                                    <button type="button"
+                                        class="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors duration-200 delete-topic-button"
+                                        data-topic-id="{{ $topic->id }}"
+                                        title="Delete topic and all its content"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
                                     <input
                                         type="text"
                                         value="{{ $topic->name }}"
@@ -272,19 +281,22 @@
                                                 <div class="item-action-menu origin-top-right absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 border" role="menu" aria-orientation="vertical" aria-labelledby="menu-button-{{ $item->id }}" tabindex="-1">
                                                     <div class="py-2" role="none">
                                                         @if ($item->item_type == 'material')
-                                                            <a href="{{ route('materials.show', $item->id) }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150" role="menuitem" tabindex="-1">
-                                                                <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                                </svg>
-                                                                View
-                                                            </a>
                                                             <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150" role="menuitem" tabindex="-1">
                                                                 <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                                 </svg>
                                                                 Edit
                                                             </a>
+                                                            <form action="{{ route('materials.destroy', ['course' => $course->id, 'material' => $item->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this assessment?');" class="block" role="none">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors duration-150" role="menuitem" tabindex="-1">
+                                                                    <svg class="w-4 h-4 mr-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                    </svg>
+                                                                    Delete
+                                                                </button>
+                                                            </form>
                                                         @elseif ($item->item_type == 'assessment')
                                                             @if ($item->type == 'quiz' || $item->type == 'exam')
                                                                 <a href="{{ route('assessments.edit.quiz', ['course' => $course->id, 'assessment' => $item->id]) }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150" role="menuitem" tabindex="-1">
@@ -360,6 +372,39 @@
                 </button>
                 <button id="submit-add-topic" class="w-full sm:w-auto order-1 sm:order-2 px-3 py-2 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 text-sm">
                     Add Topic
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Delete Topic Confirmation Modal --}}
+    <div id="delete-topic-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden backdrop-blur-sm px-4">
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-200 scale-95">
+            <div class="flex items-center mb-3 sm:mb-4">
+                <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-red-100 text-red-600 rounded-full mr-2 sm:mr-3">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Delete Topic</h2>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm sm:text-base text-gray-600 mb-2">Are you sure you want to delete this topic?</p>
+                <p class="text-sm text-red-600 font-medium">⚠️ This will permanently delete:</p>
+                <ul class="text-sm text-gray-600 mt-2 ml-4 list-disc">
+                    <li>The topic "<span id="topic-name-to-delete" class="font-medium"></span>"</li>
+                    <li>All materials in this topic</li>
+                    <li>All assessments (quizzes, exams, assignments) in this topic</li>
+                    <li>All submitted assessments and student progress</li>
+                </ul>
+                <p class="text-sm text-red-600 font-medium mt-2">This action cannot be undone!</p>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <button id="cancel-delete-topic" class="w-full sm:w-auto order-2 sm:order-1 px-3 py-2 sm:px-4 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200 text-sm">
+                    Cancel
+                </button>
+                <button id="confirm-delete-topic" class="w-full sm:w-auto order-1 sm:order-2 px-3 py-2 sm:px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 text-sm">
+                    Delete Topic
                 </button>
             </div>
         </div>
@@ -453,6 +498,101 @@
                         }
                     });
                 });
+
+                // --- Delete Topic Button Logic ---
+                document.querySelectorAll('.delete-topic-button').forEach(button => {
+                    button.addEventListener('click', function(event) {
+                        event.stopPropagation();
+                        const topicId = this.getAttribute('data-topic-id');
+                        const topicSection = document.querySelector(`.topic-section[data-topic-id="${topicId}"]`);
+                        const topicNameInput = topicSection.querySelector('.topic-name-input');
+                        const topicName = topicNameInput ? topicNameInput.value : 'this topic';
+                        
+                        // Set the topic name in the modal
+                        document.getElementById('topic-name-to-delete').textContent = topicName;
+                        
+                        // Store the topic ID for deletion
+                        document.getElementById('delete-topic-modal').setAttribute('data-topic-id', topicId);
+                        
+                        // Show the delete confirmation modal
+                        const deleteModal = document.getElementById('delete-topic-modal');
+                        deleteModal.classList.remove('hidden');
+                        deleteModal.querySelector('.transform').classList.remove('scale-95');
+                        deleteModal.querySelector('.transform').classList.add('scale-100');
+                    });
+                });
+
+                // --- Delete Topic Modal Logic ---
+                const deleteTopicModal = document.getElementById('delete-topic-modal');
+                const cancelDeleteTopic = document.getElementById('cancel-delete-topic');
+                const confirmDeleteTopic = document.getElementById('confirm-delete-topic');
+
+                if (cancelDeleteTopic) {
+                    cancelDeleteTopic.addEventListener('click', function() {
+                        deleteTopicModal.querySelector('.transform').classList.add('scale-95');
+                        deleteTopicModal.querySelector('.transform').classList.remove('scale-100');
+                        setTimeout(() => {
+                            deleteTopicModal.classList.add('hidden');
+                        }, 150);
+                    });
+                }
+
+                if (confirmDeleteTopic) {
+                    confirmDeleteTopic.addEventListener('click', function() {
+                        const topicId = deleteTopicModal.getAttribute('data-topic-id');
+                        
+                        // Disable the button and show loading state
+                        confirmDeleteTopic.disabled = true;
+                        confirmDeleteTopic.innerHTML = 'Deleting...';
+                        
+                        fetch(`/topics/${topicId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Remove the topic section from the DOM
+                                const topicSection = document.querySelector(`.topic-section[data-topic-id="${topicId}"]`);
+                                if (topicSection) {
+                                    topicSection.remove();
+                                }
+                                
+                                // Close the modal
+                                deleteTopicModal.querySelector('.transform').classList.add('scale-95');
+                                deleteTopicModal.querySelector('.transform').classList.remove('scale-100');
+                                setTimeout(() => {
+                                    deleteTopicModal.classList.add('hidden');
+                                }, 150);
+                                
+                                // Show success message (you can customize this)
+                                alert('Topic and all its content deleted successfully!');
+                                
+                                // Check if no topics remain and show empty state
+                                const remainingTopics = document.querySelectorAll('.topic-section');
+                                if (remainingTopics.length === 0) {
+                                    location.reload(); // Reload to show empty state
+                                }
+                            } else {
+                                alert('Error: ' + (data.message || 'Failed to delete topic'));
+                                // Re-enable the button
+                                confirmDeleteTopic.disabled = false;
+                                confirmDeleteTopic.innerHTML = 'Delete Topic';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred while deleting the topic');
+                            // Re-enable the button
+                            confirmDeleteTopic.disabled = false;
+                            confirmDeleteTopic.innerHTML = 'Delete Topic';
+                        });
+                    });
+                }
 
                 // --- Per-topic "Add Activity/Resource" Dropdowns (corrected to use forEach) ---
                 document.querySelectorAll('.topic-add-menu-button').forEach(button => {
@@ -562,6 +702,13 @@
                 addTopicModal?.addEventListener('click', function(event) {
                     if (event.target === addTopicModal) {
                         cancelAddTopic.click();
+                    }
+                });
+
+                // Close delete modal when clicking outside
+                deleteTopicModal?.addEventListener('click', function(event) {
+                    if (event.target === deleteTopicModal) {
+                        cancelDeleteTopic.click();
                     }
                 });
 

@@ -239,19 +239,6 @@
                         <div class="nav-indicator"></div>
                     </a>
                 </div>
-
-                <div class="nav-section">
-                    <div class="nav-section-title">Support</div>
-                    
-                    <a href="#" 
-                       class="nav-item">
-                        <div class="nav-icon">
-                            <i class="fas fa-phone"></i>
-                        </div>
-                        <span class="nav-text">Contact</span>
-                        <div class="nav-indicator"></div>
-                    </a>
-                </div>
             </nav>
         </aside>
 

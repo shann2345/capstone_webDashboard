@@ -502,4 +502,46 @@ class AssessmentController extends Controller
         return view('instructor.assessment.showAssignment', compact('course' , 'assessment'));
     }
 
+    public function destroy(Assessment $assessment)
+    {
+        // Check if the assessment belongs to a course owned by the authenticated instructor
+        $course = $assessment->course;
+        if ($course->instructor_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete the assessment file if it exists
+            if ($assessment->assessment_file_path && Storage::disk('public')->exists($assessment->assessment_file_path)) {
+                Storage::disk('public')->delete($assessment->assessment_file_path);
+            }
+
+            // Delete related questions and their options (if any)
+            foreach ($assessment->questions as $question) {
+                $question->options()->delete(); // Delete question options
+                $question->delete(); // Delete the question
+            }
+
+            // Delete related submitted assessments and their questions
+            foreach ($assessment->submittedAssessments as $submittedAssessment) {
+                foreach ($submittedAssessment->submittedQuestions as $submittedQuestion) {
+                    $submittedQuestion->submittedOptions()->delete(); // Delete submitted question options
+                    $submittedQuestion->delete(); // Delete submitted question
+                }
+                $submittedAssessment->delete(); // Delete submitted assessment
+            }
+
+            // Delete the assessment record
+            $assessment->delete();
+
+            DB::commit();
+            return redirect()->route('courses.show', $course->id)->with('success', 'Assessment deleted successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Assessment deletion failed: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            return redirect()->back()->with('error', 'Failed to delete assessment: ' . $e->getMessage());
+        }
+    }
+
 }

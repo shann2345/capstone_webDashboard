@@ -118,6 +118,7 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
 
     Route::post('/topics', [TopicController::class, 'store'])->name('topics.store');
     Route::patch('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
+    Route::delete('/topics/{topic}', [TopicController::class, 'destroy'])->name('topics.destroy');
 
     Route::get('/course/{course}/materials', [MaterialController::class, 'create'])->name('materials.create');
     Route::post('/course/{course}/materials', [MaterialController::class, 'store'])->name('materials.store');
@@ -125,13 +126,14 @@ Route::middleware(['auth:web', 'role:instructor', 'verified'])->group(function (
     Route::get('/materials/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
     Route::put('/materials/{material}', [MaterialController::class, 'update'])->name('materials.update');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
+    Route::delete('/materials/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
 
     Route::get('/courses/{course}/assessments/withQ/{type}', [AssessmentController::class, 'createQuiz'])->name('assessments.create.quiz');
     Route::post('/courses/{course}/assessments/store/quiz', [AssessmentController::class, 'storeQuiz'])->name('assessments.store.quiz');
     Route::get('/courses/{course}/assessments/{assessment}/showQ', [AssessmentController::class, 'showQuiz'])->name('assessments.show.quiz');
     Route::get('/courses/{course}/assessments/{assessment}/edit/quizType', [AssessmentController::class, 'editQuiz'])->name('assessments.edit.quiz');
     Route::put('/courses/{course}/assessments/{assessment}/update/quizType', [AssessmentController::class, 'updateQuiz'])->name('assessments.update.quiz');
-    Route::delete('/{assessment}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
+    Route::delete('/assessments/{assessment}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
 
     Route::get('/courses/{course}/assessments/withOutQ/{typeAct}', [AssessmentController::class, 'createAssignment'])->name('assessments.create.assignment');
     Route::post('/courses/{course}/assessments/store/assignment', [AssessmentController::class, 'storeAssignment'])->name('assessments.store.assignment');

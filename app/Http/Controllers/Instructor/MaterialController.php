@@ -6,6 +6,7 @@ use App\Models\Course; // To fetch the course
 use App\Models\Material; // To work with Material model
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth; // For authentication
 use Illuminate\Support\Facades\Storage; // For file storage operations
 use Illuminate\Support\Facades\Response; // For file downloads
 use Illuminate\Support\Str;
@@ -306,5 +307,24 @@ class MaterialController extends Controller
         $material->save();
 
         return redirect()->route('materials.show', $material->id)->with('success', 'Material updated successfully!');
+    }
+
+    public function destroy(Material $material)
+    {
+        // Check if the material belongs to a course owned by the authenticated instructor
+        $course = $material->course;
+        if ($course->instructor_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Delete the file if it exists and is not a link
+        if ($material->material_type !== 'link' && $material->file_path && Storage::disk('public')->exists($material->file_path)) {
+            Storage::disk('public')->delete($material->file_path);
+        }
+
+        // Delete the material record
+        $material->delete();
+
+        return redirect()->route('courses.show', $course->id)->with('success', 'Material deleted successfully!');
     }
 }

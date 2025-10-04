@@ -39,12 +39,14 @@ class StudentAssessmentsExport
         $assessments = $courses->flatMap(function($course) {
             return $course->assessments->map(function($assessment) use ($course) {
                 $assessment->course_name = $course->title;
+                $assessment->course_id = $course->id;
                 return $assessment;
             });
-        })->sortBy(function($assessment) {
-            // Sort by type (quiz, exam, assignment, etc.) then by title
-            return $assessment->type . '_' . $assessment->title;
-        });
+        })->sortBy([
+            ['course_name', 'asc'],  // Sort by course name first
+            ['type', 'asc'],         // Then by assessment type
+            ['title', 'asc']         // Finally by assessment title
+        ]);
         
         // Get students enrolled in these courses
         $studentsQuery = User::where('role', 'student')
@@ -72,35 +74,74 @@ class StudentAssessmentsExport
         
         $data = [];
         
-        // Create headers row
-        $headers = [
+        // Create two header rows for better organization
+        $courseHeaders = [
+            'Student Info',
+            '',
+            '',
+            ''
+        ];
+        
+        $assessmentHeaders = [
             'Student Name',
             'Email', 
             'Program',
             'Section'
         ];
         
-        // Group assessments by type for better organization
-        $assessmentsByType = $assessments->groupBy('type');
+        // Group assessments by course first, then by type
+        $assessmentsByCourse = $assessments->groupBy('course_name');
         
-        // Add assessment columns grouped by type
-        foreach ($assessmentsByType as $type => $typeAssessments) {
-            foreach ($typeAssessments as $assessment) {
-                $headers[] = ucfirst($type) . ': ' . $assessment->title;
-                $headers[] = 'Total Points';
+        // Add course and assessment columns
+        foreach ($assessmentsByCourse as $courseName => $courseAssessments) {
+            $assessmentsByType = $courseAssessments->groupBy('type');
+            
+            // Count total columns for this course (including type averages and course overall)
+            $courseColumnCount = 0;
+            foreach ($assessmentsByType as $type => $typeAssessments) {
+                $courseColumnCount += $typeAssessments->count() * 2; // Each assessment has score + total points
+                if ($typeAssessments->count() > 1) {
+                    $courseColumnCount += 1; // Type average column
+                }
+            }
+            $courseColumnCount += 2; // Add 2 for course overall average and performance
+            
+            // Add course name spanning across all its assessment columns
+            $courseHeaders[] = $courseName;
+            for ($i = 1; $i < $courseColumnCount; $i++) {
+                $courseHeaders[] = ''; // Empty cells for course name spanning
             }
             
-            // Add type totals
-            if ($typeAssessments->count() > 1) {
-                $headers[] = ucfirst($type) . ' Average';
+            // Add assessment columns for this course
+            foreach ($assessmentsByType as $type => $typeAssessments) {
+                foreach ($typeAssessments as $assessment) {
+                    $assessmentHeaders[] = ucfirst($type) . ': ' . $assessment->title;
+                    $assessmentHeaders[] = 'Total Points';
+                }
+                
+                // Add type average if more than one assessment of this type
+                if ($typeAssessments->count() > 1) {
+                    $assessmentHeaders[] = ucfirst($type) . ' Average';
+                }
             }
+            
+            // Add course-level overall statistics
+            $assessmentHeaders[] = 'Course Average';
+            $assessmentHeaders[] = 'Course Performance';
         }
         
-        // Add overall statistics
-        $headers[] = 'Overall Average';
-        $headers[] = 'Performance Level';
+        // Add overall statistics only if not exporting all courses
+        $isExportingAllCourses = empty($this->filters['course_id']) || $this->filters['course_id'] === 'all';
+        if (!$isExportingAllCourses) {
+            $courseHeaders[] = 'Overall Stats';
+            $courseHeaders[] = '';
+            $assessmentHeaders[] = 'Overall Average';
+            $assessmentHeaders[] = 'Performance Level';
+        }
         
-        $data[] = $headers;
+        // Add both header rows to data
+        $data[] = $courseHeaders;
+        $data[] = $assessmentHeaders;
         
         // Add data rows for each student
         foreach ($students as $student) {
@@ -114,61 +155,91 @@ class StudentAssessmentsExport
             // Create lookup for student's submissions
             $submissions = $student->submittedAssessments->keyBy('assessment_id');
             
-            $typeScores = []; // Track scores by assessment type for averages
+            $allTypeScores = []; // Track all percentage scores for overall average
             
-            // Add scores for each assessment grouped by type
-            foreach ($assessmentsByType as $type => $typeAssessments) {
-                $typeScoresList = [];
+            // Process assessments grouped by course
+            foreach ($assessmentsByCourse as $courseName => $courseAssessments) {
+                $assessmentsByType = $courseAssessments->groupBy('type');
+                $courseScores = []; // Track scores for this specific course
                 
-                foreach ($typeAssessments as $assessment) {
-                    $submission = $submissions->get($assessment->id);
+                // Add scores for each assessment type within this course
+                foreach ($assessmentsByType as $type => $typeAssessments) {
+                    $typeScoresList = [];
                     
-                    if ($submission && $submission->score !== null) {
-                        $score = round($submission->score, 1);
-                        $row[] = $score . '%';
-                        $typeScoresList[] = $score;
-                    } else {
-                        $row[] = $submission ? 'Pending' : 'Not Submitted';
+                    foreach ($typeAssessments as $assessment) {
+                        $submission = $submissions->get($assessment->id);
+                        
+                        if ($submission && $submission->score !== null) {
+                            $score = round($submission->score, 1);
+                            $row[] = $score;
+                            
+                            // Convert raw score to percentage for average calculations
+                            $totalPoints = $this->calculateAssessmentTotalPoints($assessment);
+                            if ($totalPoints > 0) {
+                                $percentageScore = ($score / $totalPoints) * 100;
+                                $typeScoresList[] = $percentageScore;
+                                $courseScores[] = $percentageScore;
+                                $allTypeScores[] = $percentageScore;
+                            }
+                        } else {
+                            $row[] = $submission ? 'Pending' : 'Not Submitted';
+                        }
+                        
+                        // Add total possible points for this assessment
+                        $totalPoints = $this->calculateAssessmentTotalPoints($assessment);
+                        $row[] = $totalPoints;
                     }
                     
-                    // Add total possible points for this assessment
-                    $totalPoints = $this->calculateAssessmentTotalPoints($assessment);
-                    $row[] = $totalPoints;
+                    // Add type average if more than one assessment of this type
+                    if ($typeAssessments->count() > 1) {
+                        if (!empty($typeScoresList)) {
+                            $typeAverage = array_sum($typeScoresList) / count($typeScoresList);
+                            $row[] = round($typeAverage, 1) . '%';
+                        } else {
+                            $row[] = 'N/A';
+                        }
+                    }
                 }
                 
-                // Add type average if more than one assessment of this type
-                if ($typeAssessments->count() > 1) {
-                    if (!empty($typeScoresList)) {
-                        $typeAverage = array_sum($typeScoresList) / count($typeScoresList);
-                        $row[] = round($typeAverage, 1) . '%';
-                        $typeScores[$type] = $typeAverage;
-                    } else {
-                        $row[] = 'N/A';
-                    }
+                // Calculate and add course-level average and performance
+                if (!empty($courseScores)) {
+                    $courseAverage = array_sum($courseScores) / count($courseScores);
+                    $row[] = round($courseAverage, 1) . '%';
+                    
+                    // Determine course performance level
+                    if ($courseAverage >= 90) $coursePerformance = 'Outstanding';
+                    elseif ($courseAverage >= 85) $coursePerformance = 'Excellent';
+                    elseif ($courseAverage >= 75) $coursePerformance = 'Good';
+                    elseif ($courseAverage >= 60) $coursePerformance = 'Satisfactory';
+                    else $coursePerformance = 'Needs Improvement';
+                    
+                    $row[] = $coursePerformance;
                 } else {
-                    // If only one assessment of this type, use its score for type average
-                    if (!empty($typeScoresList)) {
-                        $typeScores[$type] = $typeScoresList[0];
-                    }
+                    $row[] = 'N/A';
+                    $row[] = 'No Data';
                 }
             }
             
-            // Calculate overall average
-            if (!empty($typeScores)) {
-                $overallAverage = array_sum($typeScores) / count($typeScores);
-                $row[] = round($overallAverage, 1) . '%';
-                
-                // Determine performance level
-                if ($overallAverage >= 90) $performanceLevel = 'Outstanding';
-                elseif ($overallAverage >= 85) $performanceLevel = 'Excellent';
-                elseif ($overallAverage >= 75) $performanceLevel = 'Good';
-                elseif ($overallAverage >= 60) $performanceLevel = 'Satisfactory';
-                else $performanceLevel = 'Needs Improvement';
-                
-                $row[] = $performanceLevel;
-            } else {
-                $row[] = 'N/A';
-                $row[] = 'No Data';
+            // Add overall statistics only if not exporting all courses
+            $isExportingAllCourses = empty($this->filters['course_id']) || $this->filters['course_id'] === 'all';
+            if (!$isExportingAllCourses) {
+                // Calculate overall average across all courses and assessment types
+                if (!empty($allTypeScores)) {
+                    $overallAverage = array_sum($allTypeScores) / count($allTypeScores);
+                    $row[] = round($overallAverage, 1) . '%';
+                    
+                    // Determine performance level
+                    if ($overallAverage >= 90) $performanceLevel = 'Outstanding';
+                    elseif ($overallAverage >= 85) $performanceLevel = 'Excellent';
+                    elseif ($overallAverage >= 75) $performanceLevel = 'Good';
+                    elseif ($overallAverage >= 60) $performanceLevel = 'Satisfactory';
+                    else $performanceLevel = 'Needs Improvement';
+                    
+                    $row[] = $performanceLevel;
+                } else {
+                    $row[] = 'N/A';
+                    $row[] = 'No Data';
+                }
             }
             
             $data[] = $row;

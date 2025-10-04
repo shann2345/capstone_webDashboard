@@ -312,11 +312,12 @@
                                                                 if ($submission->score !== null) {
                                                                     $assessment = $submission->assessment;
                                                                     if ($assessment) {
-                                                                        // Use the same calculation method from the controller
+                                                                        // Calculate percentage for all assessment types consistently
                                                                         $assessmentType = strtolower(trim($assessment->type));
+                                                                        $totalPoints = $assessment->total_points ?: 100;
                                                                         
                                                                         if (in_array($assessmentType, ['quiz', 'exam'])) {
-                                                                            // For quiz/exam: calculate percentage based on question points
+                                                                            // For quiz/exam: try to use question points first, fallback to total_points
                                                                             $submittedQuestions = $submission->submittedQuestions ?? collect();
                                                                             if ($submittedQuestions->count() > 0) {
                                                                                 $totalMaxPoints = $submittedQuestions->sum('max_points');
@@ -324,13 +325,20 @@
                                                                                 if ($totalMaxPoints > 0) {
                                                                                     $calculatedScore = ($totalEarnedPoints / $totalMaxPoints) * 100;
                                                                                     $submissionScores[] = $calculatedScore;
+                                                                                } else {
+                                                                                    // Fallback to raw score percentage calculation
+                                                                                    $calculatedScore = ($submission->score / $totalPoints) * 100;
+                                                                                    $submissionScores[] = $calculatedScore;
                                                                                 }
                                                                             } else {
-                                                                                $submissionScores[] = $submission->score;
+                                                                                // No submitted questions, calculate from raw score
+                                                                                $calculatedScore = ($submission->score / $totalPoints) * 100;
+                                                                                $submissionScores[] = $calculatedScore;
                                                                             }
                                                                         } else {
-                                                                            // For assignments: use direct score
-                                                                            $submissionScores[] = $submission->score;
+                                                                            // For assignments: convert raw score to percentage
+                                                                            $calculatedScore = ($submission->score / $totalPoints) * 100;
+                                                                            $submissionScores[] = $calculatedScore;
                                                                         }
                                                                     }
                                                                 }
@@ -527,7 +535,15 @@
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm text-gray-900">
                                                         @if($assessment->student_score !== null)
-                                                            {{ $assessment->student_score }}%
+                                                            <div class="font-medium text-gray-900">{{ $assessment->student_score }}</div>
+                                                            @if($assessment->earned_points !== null && $assessment->max_points !== null)
+                                                                <div class="text-xs text-gray-500">
+                                                                    out of {{ $assessment->max_points }} points
+                                                                    @if($assessment->max_points > 0)
+                                                                        ({{ round(($assessment->student_score / $assessment->max_points) * 100, 1) }}%)
+                                                                    @endif
+                                                                </div>
+                                                            @endif
                                                         @else
                                                             --
                                                         @endif
@@ -541,13 +557,17 @@
                                                                 'id' => $assessment->id,
                                                                 'title' => $assessment->title,
                                                                 'type' => $assessment->type,
+                                                                'total_points' => $assessment->total_points,
                                                                 'unavailable_at' => $assessment->unavailable_at,
                                                                 'student_score' => $assessment->student_score,
+                                                                'earned_points' => $assessment->earned_points,
+                                                                'max_points' => $assessment->max_points,
                                                                 'student_submitted' => $assessment->student_submitted,
                                                                 'submission_id' => $assessment->submission_id,
                                                                 'submitted_at' => $assessment->submitted_at,
                                                                 'submitted_file' => $assessment->submitted_file,
                                                                 'submission_status' => $assessment->submission_status,
+                                                                'instructor_feedback' => $assessment->instructor_feedback,
                                                                 'course_info' => [
                                                                     'id' => $assessment->course_info->id,
                                                                     'title' => $assessment->course_info->title
@@ -852,14 +872,32 @@
 
                 {{-- Tab 4: Grading & Feedback --}}
                 <div id="gradingTab" class="modal-tab-content hidden">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-blue-800 font-medium">Assessment Information</span>
+                        </div>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <p><strong>Type:</strong> <span id="gradingAssessmentType"></span></p>
+                            <p><strong>Total Points:</strong> <span id="gradingTotalPoints"></span> points</p>
+                            <p><strong>Current Score:</strong> <span id="gradingCurrentScore"></span></p>
+                        </div>
+                    </div>
+                    
                     <form id="gradingForm" class="space-y-8">
                         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                            <label for="newScore" class="block text-sm font-semibold text-gray-700 mb-3">Score (%)</label>
-                            <input type="number" id="newScore" name="score" min="0" max="100" step="0.1" 
-                                   class="block w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <label for="newScore" class="block text-sm font-semibold text-gray-700 mb-3">
+                                Score <span class="text-red-500">*</span>
+                                <span class="text-gray-500">(out of <span id="maxPointsDisplay"></span> points)</span>
+                            </label>
+                            <input type="number" id="newScore" name="score" min="0" step="0.01" 
+                                   class="block w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="Enter score...">
                         </div>
                         
-                        {{-- <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                             <label for="feedback" class="block text-sm font-semibold text-gray-700 mb-3">Instructor Feedback</label>
                             <textarea id="feedback" name="feedback" rows="6" 
                                       class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -872,7 +910,7 @@
                                        class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                 <label for="returnToStudent" class="text-sm font-medium text-gray-700">Return graded assessment to student with feedback</label>
                             </div>
-                        </div> --}}
+                        </div>
                     </form>
                 </div>
 
@@ -988,6 +1026,7 @@
         function openAssessmentModal(assessment) {
             try {
                 console.log('Opening assessment modal for:', assessment);
+                console.log('Assessment total_points:', assessment.total_points);
                 
                 const modal = document.getElementById('assessmentModal');
                 if (!modal) {
@@ -1025,8 +1064,31 @@
                 modalAssessmentType.textContent = assessment.type.charAt(0).toUpperCase() + assessment.type.slice(1);
                 modalDueDate.textContent = assessment.submitted_at ? 
                     new Date(assessment.submitted_at).toLocaleDateString() + ' ' + new Date(assessment.submitted_at).toLocaleTimeString() : 'Not submitted';
+                
+                const maxPoints = assessment.total_points || 100;
                 modalCurrentScore.textContent = assessment.student_score ? 
-                    `${assessment.student_score}%` : 'Not graded';
+                    `${assessment.student_score}/${maxPoints}` : 'Not graded';
+
+                // Update grading tab information
+                const gradingAssessmentType = document.getElementById('gradingAssessmentType');
+                const gradingTotalPoints = document.getElementById('gradingTotalPoints');
+                const gradingCurrentScore = document.getElementById('gradingCurrentScore');
+                const maxPointsDisplay = document.getElementById('maxPointsDisplay');
+                const newScoreInput = document.getElementById('newScore');
+                
+                // Ensure we have a valid total_points value
+                const totalPoints = assessment.total_points || 100;
+                console.log('Using total_points:', totalPoints);
+                
+                if (gradingAssessmentType) gradingAssessmentType.textContent = assessment.type.charAt(0).toUpperCase() + assessment.type.slice(1);
+                if (gradingTotalPoints) gradingTotalPoints.textContent = totalPoints;
+                if (gradingCurrentScore) gradingCurrentScore.textContent = assessment.student_score ? `${assessment.student_score} points` : 'Not graded';
+                if (maxPointsDisplay) maxPointsDisplay.textContent = totalPoints;
+                
+                // Set the max attribute on the score input
+                if (newScoreInput) {
+                    newScoreInput.setAttribute('max', totalPoints);
+                }
 
                 // Show/hide tabs based on assessment type
                 updateTabVisibility(assessment.type);
@@ -1058,8 +1120,14 @@
 
                 // Load current grades if available (only for non-quiz assessments)
                 const newScoreElement = document.getElementById('newScore');
+                const feedbackElement = document.getElementById('feedback');
+                
                 if (assessment.student_score && newScoreElement && !['quiz', 'exam'].includes(assessment.type.toLowerCase())) {
                     newScoreElement.value = assessment.student_score;
+                }
+                
+                if (assessment.instructor_feedback && feedbackElement) {
+                    feedbackElement.value = assessment.instructor_feedback;
                 }
 
                 // Show modal
@@ -1500,9 +1568,10 @@
                 return;
             }
             
-            // Validate score range
-            if (score && (score < 0 || score > 100)) {
-                alert('Score must be between 0 and 100');
+            // Validate score range using assessment's total_points
+            const maxPoints = currentAssessment.total_points || 100; // fallback to 100 if not set
+            if (score && (score < 0 || score > maxPoints)) {
+                alert(`Score must be between 0 and ${maxPoints} points`);
                 return;
             }
             
@@ -1543,12 +1612,15 @@
                             if (titleCell && titleCell.textContent.trim() === currentAssessment.title.trim()) {
                                 const scoreCell = row.querySelector('td:nth-child(6) .text-sm');
                                 if (scoreCell) {
-                                    scoreCell.textContent = `${score}%`;
+                                    const maxPoints = currentAssessment.total_points || 100;
+                                    scoreCell.textContent = `${score}/${maxPoints}`;
                                 }
                             }
                         });
                         
-                        document.getElementById('modalCurrentScore').textContent = `${score}%`;
+                        const maxPoints = currentAssessment.total_points || 100;
+                        document.getElementById('modalCurrentScore').textContent = `${score}/${maxPoints}`;
+                        document.getElementById('gradingCurrentScore').textContent = `${score} points`;
                     }
                     
                     closeAssessmentModal();

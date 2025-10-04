@@ -20,9 +20,9 @@ class StudentAssessmentController extends Controller
         if (!method_exists($user, 'isEnrolledInCourse') || !$user->isEnrolledInCourse($assessment->course_id)) {
             return response()->json(['message' => 'Unauthorized: Not enrolled in the course for this assessment.'], 403);
         }
-        if ($assessment->available_at && now()->lessThan($assessment->available_at)) {
-            return response()->json(['message' => 'Assessment is not yet available.'], 403);
-        }
+        
+        // Remove availability check to allow downloading assessment data for offline use
+        // The client-side app will handle availability checking when the user actually tries to take the assessment
 
         // Eager load questions and their options (important for quizzes/exams)
         $assessment = Assessment::with('questions.options')->find($assessment->id);
@@ -65,9 +65,8 @@ class StudentAssessmentController extends Controller
             return response()->json(['message' => 'Questions are only available for quiz and exam assessments.'], 403);
         }
 
-        if ($assessment->available_at && now()->lessThan($assessment->available_at)) {
-            return response()->json(['message' => 'Assessment is not yet available.'], 403);
-        }
+        // Remove availability check to allow downloading quiz/exam questions for offline use
+        // The client-side app will handle availability checking when the user actually tries to take the assessment
 
         // Load questions with their options
         $assessment->load('questions.options');

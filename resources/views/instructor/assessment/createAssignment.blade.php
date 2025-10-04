@@ -135,15 +135,6 @@
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div>
-                                    <label for="duration_minutes" class="block text-gray-700 text-sm font-bold mb-2">Duration in Minutes (Optional):</label>
-                                    <input type="number" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('duration_minutes') border-red-500 @enderror"
-                                           id="duration_minutes" name="duration_minutes" value="{{ old('duration_minutes', $assessment->duration_minutes ?? '') }}" min="0">
-                                    <p class="text-gray-500 text-xs italic mt-1">Set a time limit for the assessment.</p>
-                                    @error('duration_minutes')
-                                        <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div>
                                     <label for="access_code" class="block text-gray-700 text-sm font-bold mb-2">Access Code (Optional):</label>
                                     <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('access_code') border-red-500 @enderror"
                                            id="access_code" name="access_code" value="{{ old('access_code', $assessment->access_code ?? '') }}">

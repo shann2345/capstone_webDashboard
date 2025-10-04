@@ -13,7 +13,7 @@ use Carbon\Carbon;
 use App\Models\Material; 
 use App\Models\Course;
 use App\Models\User;
-use Illuminate\Support\Facades\log;
+use Illuminate\Support\Facades\Log;
 use App\Exports\StudentAssessmentsExport;
 
 class InstructorController extends Controller
@@ -704,15 +704,17 @@ class InstructorController extends Controller
         
         $completedAssessments = $completedSubmissions->count();
         
-        // Calculate average grade from actual submissions with proper percentage calculation
+        // Calculate average grade from actual submissions using raw scores
         $submissionScores = [];
         foreach ($completedSubmissions as $submission) {
             if ($submission->score !== null) {
-                // Get the assessment to determine type
+                // Get the assessment to determine total points
                 $assessment = $studentCourses->flatMap->assessments->where('id', $submission->assessment_id)->first();
                 if ($assessment) {
-                    $calculatedScore = $this->calculateAssessmentScore($assessment, $submission->load('submittedQuestions'));
-                    $submissionScores[] = $calculatedScore;
+                    $totalPoints = $assessment->total_points ?: 100;
+                    // Convert raw score to percentage
+                    $percentageScore = ($submission->score / $totalPoints) * 100;
+                    $submissionScores[] = $percentageScore;
                 }
             }
         }
@@ -785,23 +787,29 @@ class InstructorController extends Controller
             $avgGrade = 0;
             
             if ($studentCount > 0) {
-                // Get average grade from actual submissions for this course with proper percentage calculation
+                $courseAssessmentIds = $course->assessments->pluck('id');
+                
+                // Get all submissions for this course
                 $courseSubmissions = \App\Models\SubmittedAssessment::with('submittedQuestions')
-                    ->whereIn('assessment_id', $course->assessments->pluck('id'))
+                    ->whereIn('assessment_id', $courseAssessmentIds)
                     ->whereIn('status', ['completed', 'graded', 'submitted'])
                     ->whereNotNull('score')
                     ->get();
 
                 if ($courseSubmissions->isNotEmpty()) {
-                    $submissionScores = [];
+                    $allScores = [];
+                    
                     foreach ($courseSubmissions as $submission) {
                         $assessment = $course->assessments->where('id', $submission->assessment_id)->first();
-                        if ($assessment) {
-                            $calculatedScore = $this->calculateAssessmentScore($assessment, $submission);
-                            $submissionScores[] = $calculatedScore;
+                        if ($assessment && $submission->score !== null) {
+                            // Use consistent calculation: convert raw score to percentage
+                            $totalPoints = $assessment->total_points ?: 100;
+                            $percentageScore = ($submission->score / $totalPoints) * 100;
+                            $allScores[] = $percentageScore;
                         }
                     }
-                    $avgGrade = !empty($submissionScores) ? array_sum($submissionScores) / count($submissionScores) : 0;
+                    
+                    $avgGrade = !empty($allScores) ? array_sum($allScores) / count($allScores) : 0;
                 } else {
                     // Fall back to enrollment grades if no submissions
                     $grades = $course->students->pluck('pivot.grade')->filter()->map(function ($grade) {
@@ -1045,23 +1053,42 @@ class InstructorController extends Controller
                         if ($submission) {
                             $assessment->student_submitted = true;
                             
-                            // Calculate percentage score for quiz/exam assessments
-                            $calculatedScore = $this->calculateAssessmentScore($assessment, $submission);
+                            // Use the raw score from submitted_assessments table
+                            $assessment->student_score = $submission->score;
                             
-                            $assessment->student_score = $calculatedScore;
+                            // Add raw score data for display
+                            $assessmentType = strtolower(trim($assessment->type));
+                            if (in_array($assessmentType, ['quiz', 'exam'])) {
+                                if ($submission->submittedQuestions && $submission->submittedQuestions->count() > 0) {
+                                    $assessment->earned_points = $submission->submittedQuestions->sum('score_earned');
+                                    $assessment->max_points = $submission->submittedQuestions->sum('max_points');
+                                } else {
+                                    $assessment->earned_points = $submission->score;
+                                    $assessment->max_points = $assessment->total_points ?: 100;
+                                }
+                            } else {
+                                // For assignments, use the stored score directly
+                                $assessment->earned_points = $submission->score;
+                                $assessment->max_points = $assessment->total_points ?: 100;
+                            }
+                            
                             $assessment->submission_date = $submission->submitted_at;
                             $assessment->submitted_at = $submission->submitted_at;
                             $assessment->submitted_file = $submission->original_filename;
                             $assessment->submission_id = $submission->id;
                             $assessment->submission_status = $submission->status;
+                            $assessment->instructor_feedback = $submission->instructor_feedback;
                         } else {
                             $assessment->student_submitted = false;
                             $assessment->student_score = null;
+                            $assessment->earned_points = null;
+                            $assessment->max_points = $assessment->total_points ?: 100;
                             $assessment->submission_date = null;
                             $assessment->submitted_at = null;
                             $assessment->submitted_file = null;
                             $assessment->submission_id = null;
                             $assessment->submission_status = null;
+                            $assessment->instructor_feedback = null;
                         }
                         
                         return $assessment;
@@ -1178,8 +1205,11 @@ class InstructorController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         
+        // Get the assessment's total points for validation
+        $maxPoints = $submission->assessment->total_points ?? 100;
+        
         $request->validate([
-            'score' => 'nullable|numeric|min:0|max:100',
+            'score' => "nullable|numeric|min:0|max:{$maxPoints}",
             'feedback' => 'nullable|string|max:1000',
             'return_to_student' => 'boolean'
         ]);
@@ -1194,14 +1224,14 @@ class InstructorController extends Controller
             $earnedPoints = 0;
             
             foreach ($submittedQuestions as $submittedQuestion) {
-                $totalPoints += $submittedQuestion->question->points;
+                $totalPoints += $submittedQuestion->question->points ?? 0;
                 if ($submittedQuestion->is_correct) {
-                    $earnedPoints += $submittedQuestion->question->points;
+                    $earnedPoints += $submittedQuestion->question->points ?? 0;
                 }
             }
             
-            // Calculate percentage score
-            $calculatedScore = $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0;
+            // Store the actual points earned, not percentage
+            $calculatedScore = $earnedPoints;
             $updateData['score'] = $calculatedScore;
             $updateData['status'] = 'graded';
             $updateData['graded_at'] = now();
